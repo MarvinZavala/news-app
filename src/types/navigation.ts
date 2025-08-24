@@ -14,9 +14,10 @@ export type AuthStackParamList = {
   ForgotPassword: undefined;
 };
 
-// Main tabs navigation - simplified structure
+// Main tabs navigation - with Submit News feature
 export type MainTabParamList = {
-  HomeTab: NavigatorScreenParams<HomeStackParamList>; // This is our main news feed
+  HomeTab: NavigatorScreenParams<HomeStackParamList>; // Main news feed
+  SubmitTab: NavigatorScreenParams<SubmitStackParamList>; // Submit news (authenticated only)
   SearchTab: NavigatorScreenParams<SearchStackParamList>;
   BookmarksTab: NavigatorScreenParams<BookmarksStackParamList>;
   ProfileTab: NavigatorScreenParams<ProfileStackParamList>;
@@ -37,9 +38,21 @@ export type HomeStackParamList = {
     newsId: string;
     title: string;
   };
-  SubmitNews: undefined; // For user-generated content
-  UserNewsPreview: { 
-    articleData: any; // Will be properly typed later
+};
+
+// Submit news stack - for user-generated content
+export type SubmitStackParamList = {
+  SubmitNewsScreen: undefined; // Main submission form
+  SubmitPreview: {
+    newsData: {
+      title: string;
+      url: string;
+      summary: string;
+      category: string;
+    };
+  };
+  SubmitSuccess: {
+    newsId: string;
   };
 };
 
@@ -85,4 +98,13 @@ export interface SearchFilters {
   };
   sortBy?: 'relevance' | 'date' | 'popularity';
   source?: string[];
+}
+
+// User-generated content types
+export interface UserNewsSubmissionForm {
+  title: string;
+  url: string;
+  summary: string;
+  category: string;
+  tags?: string[];
 }

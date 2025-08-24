@@ -209,24 +209,78 @@ export class NewsService {
     }
   }
 
-  // Submit user-generated news
+  // Submit user-generated news - Now creates a real NewsStory immediately
   async submitUserNews(submission: Omit<UserNewsSubmission, 'id' | 'submittedAt' | 'status'>): Promise<string> {
     try {
-      const newSubmission: Omit<UserNewsSubmission, 'id'> = {
-        ...submission,
-        status: 'pending',
-        submittedAt: new Date()
+      console.log('🚀 Creating user-generated news story:', submission);
+      
+      // Create a full NewsStory object for user-generated content
+      const userGeneratedStory = {
+        title: submission.title,
+        summary: submission.summary,
+        content: `User-submitted news: ${submission.summary}\n\nSource: ${submission.url}`,
+        category: submission.category,
+        
+        // Default bias score for user-generated content (will be updated by community votes)
+        biasScore: {
+          left: 33,
+          center: 34,
+          right: 33
+        },
+        
+        // Single source (user-provided URL)
+        totalSources: 1,
+        sources: [{
+          id: `user-source-${Date.now()}`,
+          name: 'User Submission',
+          url: submission.url,
+          bias: 'center' as const,
+          credibilityScore: 3.0, // Neutral starting score
+          publishedAt: new Date()
+        }],
+        
+        // Community engagement (starts empty)
+        userVotes: [],
+        totalVotes: 0,
+        averageCredibility: 0,
+        averageQuality: 0,
+        
+        // AI analysis (none initially)
+        aiSummary: undefined,
+        aiCredibilityScore: undefined,
+        aiDetectedBias: undefined,
+        
+        // Metadata
+        isBreaking: false,
+        isTrending: false,
+        isUserGenerated: true,
+        submittedBy: submission.submittedBy,
+        
+        // Engagement metrics
+        viewCount: 0,
+        shareCount: 0,
+        bookmarkCount: 0,
+        
+        // Timestamps
+        createdAt: new Date(),
+        updatedAt: new Date()
       };
 
-      const docRef = await addDoc(this.userSubmissionsCollection, {
-        ...newSubmission,
-        submittedAt: serverTimestamp()
+      // Add directly to news collection (not user submissions)
+      const docRef = await addDoc(this.newsCollection, {
+        ...userGeneratedStory,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        sources: userGeneratedStory.sources.map(source => ({
+          ...source,
+          publishedAt: serverTimestamp()
+        }))
       });
 
-      console.log('News submission created successfully:', docRef.id);
+      console.log('✅ User-generated news story created successfully:', docRef.id);
       return docRef.id;
     } catch (error) {
-      console.error('Error submitting user news:', error);
+      console.error('❌ Error submitting user news:', error);
       throw error;
     }
   }
@@ -255,6 +309,51 @@ export class NewsService {
     } catch (error) {
       console.error('Error getting trending topics:', error);
       return [];
+    }
+  }
+  
+  // Get user-generated content stats
+  async getUserSubmissionStats(userId: string): Promise<{
+    totalSubmissions: number;
+    approvedSubmissions: number;
+    totalVotes: number;
+    averageRating: number;
+  }> {
+    try {
+      const q = query(
+        this.newsCollection,
+        where('submittedBy', '==', userId),
+        where('isUserGenerated', '==', true)
+      );
+
+      const snapshot = await getDocs(q);
+      let totalVotes = 0;
+      let totalRating = 0;
+      let ratingCount = 0;
+      
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        totalVotes += data.totalVotes || 0;
+        if (data.averageCredibility > 0) {
+          totalRating += data.averageCredibility;
+          ratingCount++;
+        }
+      });
+
+      return {
+        totalSubmissions: snapshot.size,
+        approvedSubmissions: snapshot.size, // All submissions are immediately approved
+        totalVotes,
+        averageRating: ratingCount > 0 ? totalRating / ratingCount : 0
+      };
+    } catch (error) {
+      console.error('Error getting user submission stats:', error);
+      return {
+        totalSubmissions: 0,
+        approvedSubmissions: 0,
+        totalVotes: 0,
+        averageRating: 0
+      };
     }
   }
 

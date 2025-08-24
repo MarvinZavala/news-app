@@ -5,14 +5,19 @@ import { Platform } from 'react-native';
 import { MainTabParamList } from '../types/navigation';
 
 // Stack Navigators
-import { HomeStackNavigator } from './stacks/HomeStackNavigator'; // This will be our main news feed
+import { HomeStackNavigator } from './stacks/HomeStackNavigator'; // Main news feed
+import { SubmitStackNavigator } from './stacks/SubmitStackNavigator'; // Submit news for authenticated users
 import { SearchStackNavigator } from './stacks/SearchStackNavigator';
 import { BookmarksStackNavigator } from './stacks/BookmarksStackNavigator';
 import { ProfileStackNavigator } from './stacks/ProfileStackNavigator';
 
+// Context for authentication check
+import { useAuth } from '../context/AuthContext';
+
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
 export const MainTabNavigator = () => {
+  const { user } = useAuth(); // Check if user is authenticated for Submit tab
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -45,7 +50,10 @@ export const MainTabNavigator = () => {
           
           switch (route.name) {
             case 'HomeTab':
-              iconName = focused ? 'newspaper' : 'newspaper-outline'; // Changed to newspaper since it's our main news feed
+              iconName = focused ? 'newspaper' : 'newspaper-outline';
+              break;
+            case 'SubmitTab':
+              iconName = focused ? 'add-circle' : 'add-circle-outline';
               break;
             case 'SearchTab':
               iconName = focused ? 'search' : 'search-outline';
@@ -82,9 +90,29 @@ export const MainTabNavigator = () => {
         name="HomeTab" 
         component={HomeStackNavigator}
         options={{ 
-          title: 'News', // Changed from 'Home' to 'News' to be clear
+          title: 'News',
           // Example: tabBarBadge: breakingNewsCount > 0 ? 'New' : undefined,
         }}
+      />
+      
+      <Tab.Screen 
+        name="SubmitTab" 
+        component={SubmitStackNavigator}
+        options={{ 
+          title: 'Submit',
+          // Only show tab if user is authenticated
+          tabBarStyle: user ? undefined : { display: 'none' },
+          tabBarButton: user ? undefined : () => null,
+        }}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            // Prevent access if not authenticated (double security)
+            if (!user) {
+              e.preventDefault();
+              // Optional: Show alert or navigate to login
+            }
+          },
+        })}
       />
       
       <Tab.Screen 
