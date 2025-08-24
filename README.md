@@ -1,8 +1,8 @@
 # News App
 
-Aplicación móvil de noticias desarrollada con React Native y Expo.
+Mobile news application developed with React Native and Expo.
 
-## Tecnologías utilizadas
+## Technologies used
 
 - React Native
 - Expo SDK 53
@@ -10,48 +10,48 @@ Aplicación móvil de noticias desarrollada con React Native y Expo.
 - React Navigation
 - AsyncStorage
 
-## Estructura del proyecto
+## Project structure
 
 ```
 src/
-  ├── assets/           # Imágenes, íconos y fuentes
-  ├── components/       # Componentes reutilizables
-  │   ├── common/       # Componentes UI básicos (Button, Input, etc.)
-  │   └── layouts/      # Componentes de layout
-  ├── context/          # Contextos de React (AuthContext, etc.)
+  ├── assets/           # Images, icons and fonts
+  ├── components/       # Reusable components
+  │   ├── common/       # Basic UI components (Button, Input, etc.)
+  │   └── layouts/      # Layout components
+  ├── context/          # React contexts (AuthContext, etc.)
   ├── hooks/            # Custom hooks
-  ├── navigation/       # Configuración de React Navigation
-  ├── screens/          # Pantallas de la aplicación
-  │   ├── Auth/         # Pantallas de autenticación
-  │   ├── Home/         # Pantallas principales
-  │   └── Onboarding/   # Pantallas de onboarding
-  ├── services/         # Servicios (API, etc.)
-  ├── utils/            # Utilidades y helpers
-  ├── constants/        # Constantes de la aplicación
-  ├── styles/           # Estilos globales
-  └── types/            # Tipos de TypeScript
+  ├── navigation/       # React Navigation setup
+  ├── screens/          # Application screens
+  │   ├── Auth/         # Authentication screens
+  │   ├── Home/         # Main screens
+  │   └── Onboarding/   # Onboarding screens
+  ├── services/         # Services (API, etc.)
+  ├── utils/            # Utilities and helpers
+  ├── constants/        # Application constants
+  ├── styles/           # Global styles
+  └── types/            # TypeScript types
 ```
 
-## Pantallas implementadas
+## Implemented screens
 
-- **Onboarding**: Introducción a la aplicación para nuevos usuarios
-- **Login**: Autenticación de usuarios
-- **Home**: Pantalla principal con lista de noticias
+- **Onboarding**: Introduction to the application for new users
+- **Login**: User authentication
+- **Home**: Main screen with news list
 
-## Requisitos
+## Requirements
 
 - Node.js >= 16
 - Expo CLI
-- iOS Simulator/Android Emulator o dispositivo físico
+- iOS Simulator/Android Emulator or physical device
 
-## Instalación
+## Installation
 
-1. Clona el repositorio
-2. Instala las dependencias: `npm install`
-3. Inicia la aplicación: `npm start`
+1. Clone the repository
+2. Install dependencies: `npm install`
+3. Start the application: `npm start`
 
-## Desarrollo
+## Development
 
-- `npm run ios`: Inicia la aplicación en el simulador iOS
-- `npm run android`: Inicia la aplicación en el emulador Android
-- `npm run web`: Inicia la aplicación en el navegador web
+- `npm run ios`: Start the application in iOS simulator
+- `npm run android`: Start the application in Android emulator
+- `npm run web`: Start the application in web browser

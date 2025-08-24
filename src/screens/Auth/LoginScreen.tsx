@@ -7,26 +7,60 @@ import {
   TouchableOpacity, 
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView
+  SafeAreaView,
+  Alert,
+  ActivityIndicator
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { RootStackParamList } from '../../types/navigation';
+import { AuthStackParamList } from '../../types/navigation';
+import { useAuth } from '../../context/AuthContext';
 
 type LoginScreenProps = {
-  navigation: StackNavigationProp<RootStackParamList, 'Login'>;
+  navigation: StackNavigationProp<AuthStackParamList, 'Login'>;
 };
 
 const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleLogin = () => {
-    // In a real app, implement actual login logic here
-    console.log('Login attempt with:', { email, password });
+  const { login, isLoading } = useAuth();
+
+  const handleLogin = async () => {
+    // Validation
+    if (!email.trim() || !password.trim()) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    if (!email.includes('@')) {
+      Alert.alert('Error', 'Please enter a valid email address');
+      return;
+    }
+
+    setIsSubmitting(true);
     
-    // For demo, just navigate to the main app
-    navigation.navigate('MainApp');
+    try {
+      console.log('🔑 Starting login process...', { email });
+      const result = await login(email, password);
+      console.log('📝 Login result:', result);
+      
+      if (!result.success) {
+        console.log('❌ Login failed:', result.error);
+        Alert.alert('Login Error', result.error || 'Failed to login');
+      } else {
+        console.log('✅ Login successful! User will be automatically navigated to MainApp');
+        // Clear form after successful login
+        setEmail('');
+        setPassword('');
+      }
+    } catch (error) {
+      console.error('💥 Unexpected error during login:', error);
+      Alert.alert('Error', 'An unexpected error occurred');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -37,15 +71,15 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
         style={styles.keyboardAvoidingView}
       >
         <View style={styles.content}>
-          <Text style={styles.title}>Iniciar Sesión</Text>
-          <Text style={styles.subtitle}>Bienvenido de nuevo a News App</Text>
+          <Text style={styles.title}>Login</Text>
+          <Text style={styles.subtitle}>Welcome back to News App</Text>
 
           <View style={styles.form}>
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Email</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Tu correo electrónico"
+                placeholder="Your email"
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -54,29 +88,40 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Contraseña</Text>
+              <Text style={styles.label}>Password</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Tu contraseña"
+                placeholder="Your password"
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
               />
             </View>
             
-            <TouchableOpacity style={styles.forgotPassword}>
-              <Text style={styles.forgotPasswordText}>¿Olvidaste tu contraseña?</Text>
+            <TouchableOpacity 
+              style={styles.forgotPassword}
+              onPress={() => navigation.navigate('ForgotPassword')}
+            >
+              <Text style={styles.forgotPasswordText}>Forgot your password?</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-              <Text style={styles.loginButtonText}>Iniciar Sesión</Text>
+            <TouchableOpacity 
+              style={[styles.loginButton, (isSubmitting || isLoading) && styles.disabledButton]} 
+              onPress={handleLogin}
+              disabled={isSubmitting || isLoading}
+            >
+              {(isSubmitting || isLoading) ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.loginButtonText}>Login</Text>
+              )}
             </TouchableOpacity>
           </View>
 
           <View style={styles.footer}>
-            <Text style={styles.footerText}>¿No tienes una cuenta? </Text>
-            <TouchableOpacity>
-              <Text style={styles.signupText}>Regístrate</Text>
+            <Text style={styles.footerText}>Don't have an account? </Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+              <Text style={styles.signupText}>Sign up</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -145,6 +190,9 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  disabledButton: {
+    backgroundColor: '#ccc',
   },
   footer: {
     flexDirection: 'row',

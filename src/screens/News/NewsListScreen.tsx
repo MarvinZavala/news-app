@@ -1,0 +1,356 @@
+import React, { useEffect, useState, useCallback } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  ActivityIndicator,
+  RefreshControl,
+  Alert,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { NewsStackParamList } from '../../types/navigation';
+import { NewsStory, NewsFilters } from '../../types/news';
+import { newsService } from '../../services/NewsService';
+import NewsCard from '../../components/NewsCard';
+import { useAuth } from '../../context/AuthContext';
+
+type NewsListScreenNavigationProp = StackNavigationProp<NewsStackParamList, 'NewsList'>;
+
+interface Props {
+  navigation: NewsListScreenNavigationProp;
+}
+
+const NewsListScreen: React.FC<Props> = ({ navigation }) => {
+  const { user } = useAuth();
+  const [stories, setStories] = useState<NewsStory[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [filters, setFilters] = useState<NewsFilters>({ sortBy: 'newest' });
+  const [error, setError] = useState<string | null>(null);
+  
+  // Real-time subscription to news
+  useEffect(() => {
+    const unsubscribe = newsService.subscribeToNews(
+      filters,
+      (response) => {
+        setStories(response.stories);
+        setLoading(false);
+        setError(null);
+      },
+      (error) => {
+        console.error('News subscription error:', error);
+        setError('Failed to load news. Please try again.');
+        setLoading(false);
+      }
+    );
+
+    return unsubscribe;
+  }, [filters]);
+
+  // Pull to refresh
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    // Force re-subscription to get fresh data
+    setFilters({ ...filters });
+    setTimeout(() => setRefreshing(false), 1000);
+  }, [filters]);
+
+  // Handle story press
+  const handleStoryPress = useCallback((story: NewsStory) => {
+    // Increment view count
+    newsService.incrementViewCount(story.id);
+    
+    navigation.navigate('NewsDetails', {
+      newsId: story.id,
+      title: story.title,
+    });
+  }, [navigation]);
+
+  // Handle bookmark
+  const handleBookmark = useCallback(async (story: NewsStory) => {
+    try {
+      // TODO: Implement bookmarking functionality
+      Alert.alert('Bookmarked', `"${story.title}" has been bookmarked!`);
+    } catch (error) {
+      console.error('Error bookmarking story:', error);
+      Alert.alert('Error', 'Failed to bookmark story. Please try again.');
+    }
+  }, []);
+
+  // Handle share
+  const handleShare = useCallback(async (story: NewsStory) => {
+    try {
+      // Increment share count
+      await newsService.incrementShareCount(story.id);
+      // TODO: Implement share functionality
+      Alert.alert('Shared', `"${story.title}" has been shared!`);
+    } catch (error) {
+      console.error('Error sharing story:', error);
+      Alert.alert('Error', 'Failed to share story. Please try again.');
+    }
+  }, []);
+
+  // Filter handlers
+  const handleFilterChange = (newFilters: Partial<NewsFilters>) => {
+    setLoading(true);
+    setFilters({ ...filters, ...newFilters });
+  };
+
+  const renderNewsItem = ({ item }: { item: NewsStory }) => (
+    <NewsCard
+      story={item}
+      onPress={handleStoryPress}
+      onBookmark={handleBookmark}
+      onShare={handleShare}
+    />
+  );
+
+  // Loading state
+  if (loading && stories.length === 0) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Latest News</Text>
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#1DA1F2" />
+          <Text style={styles.loadingText}>Loading news...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Error state
+  if (error && stories.length === 0) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Latest News</Text>
+        </View>
+        <View style={styles.errorContainer}>
+          <Ionicons name="alert-circle-outline" size={48} color="#FF6B6B" />
+          <Text style={styles.errorTitle}>Something went wrong</Text>
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity 
+            style={styles.retryButton} 
+            onPress={() => {
+              setLoading(true);
+              setError(null);
+              setFilters({ ...filters });
+            }}
+          >
+            <Text style={styles.retryButtonText}>Try Again</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Latest News</Text>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={[
+              styles.headerButton,
+              filters.sortBy === 'newest' && styles.headerButtonActive
+            ]}
+            onPress={() => handleFilterChange({ sortBy: 'newest' })}
+          >
+            <Ionicons 
+              name="time-outline" 
+              size={16} 
+              color={filters.sortBy === 'newest' ? '#fff' : '#1DA1F2'} 
+            />
+            <Text style={[
+              styles.headerButtonText,
+              filters.sortBy === 'newest' && styles.headerButtonTextActive
+            ]}>Latest</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[
+              styles.headerButton,
+              filters.sortBy === 'trending' && styles.headerButtonActive
+            ]}
+            onPress={() => handleFilterChange({ sortBy: 'trending' })}
+          >
+            <Ionicons 
+              name="trending-up" 
+              size={16} 
+              color={filters.sortBy === 'trending' ? '#fff' : '#1DA1F2'} 
+            />
+            <Text style={[
+              styles.headerButtonText,
+              filters.sortBy === 'trending' && styles.headerButtonTextActive
+            ]}>Trending</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[
+              styles.headerButton,
+              filters.sortBy === 'mostVoted' && styles.headerButtonActive
+            ]}
+            onPress={() => handleFilterChange({ sortBy: 'mostVoted' })}
+          >
+            <Ionicons 
+              name="people-outline" 
+              size={16} 
+              color={filters.sortBy === 'mostVoted' ? '#fff' : '#1DA1F2'} 
+            />
+            <Text style={[
+              styles.headerButtonText,
+              filters.sortBy === 'mostVoted' && styles.headerButtonTextActive
+            ]}>Popular</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <FlatList
+        data={stories}
+        renderItem={renderNewsItem}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={stories.length === 0 ? styles.emptyContainer : styles.listContainer}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+        ListEmptyComponent={
+          !loading && !error ? (
+            <View style={styles.emptyStateContainer}>
+              <Ionicons name="newspaper-outline" size={64} color="#DDD" />
+              <Text style={styles.emptyStateTitle}>No news available</Text>
+              <Text style={styles.emptyStateText}>
+                Try adjusting your filters or check back later
+              </Text>
+            </View>
+          ) : null
+        }
+      />
+    </SafeAreaView>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F8F9FA',
+  },
+  header: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 12,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  headerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: '#f8f9fa',
+  },
+  headerButtonActive: {
+    backgroundColor: '#1DA1F2',
+  },
+  headerButtonText: {
+    fontSize: 11,
+    color: '#1DA1F2',
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  headerButtonTextActive: {
+    color: '#fff',
+  },
+  listContainer: {
+    paddingVertical: 8,
+  },
+  emptyContainer: {
+    flexGrow: 1,
+  },
+  
+  // Loading states
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#666',
+  },
+  
+  // Error states
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  errorTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 22,
+  },
+  retryButton: {
+    backgroundColor: '#1DA1F2',
+    paddingHorizontal: 32,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  
+  // Empty state
+  emptyStateContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 80,
+  },
+  emptyStateTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    paddingHorizontal: 40,
+    lineHeight: 22,
+  },
+});
+
+export default NewsListScreen;

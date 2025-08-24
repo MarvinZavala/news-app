@@ -1,8 +1,13 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, SafeAreaView } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../../types/navigation';
+import { useOnboarding } from '../../context/OnboardingContext';
+import LottieView from 'lottie-react-native';
+
+// Import Lottie animation
+const welcomeAnimation = require('../../assets/onboardingscreen/welcomenews.json');
 
 type OnboardingScreenProps = {
   navigation: StackNavigationProp<RootStackParamList, 'Onboarding'>;
@@ -10,35 +15,55 @@ type OnboardingScreenProps = {
 
 const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation }) => {
   const [currentPage, setCurrentPage] = useState(0);
+  const lottieRef = useRef<LottieView>(null);
   
   const onboardingData = [
     {
-      title: "Bienvenido a News App",
-      description: "Tu fuente diaria para las noticias más relevantes",
-      image: require('../../assets/images/onboarding1.png'),
+      title: "Welcome to News App",
+      description: "Your daily source for the most relevant news",
     },
     {
-      title: "Noticias Personalizadas",
-      description: "Recibe contenido basado en tus intereses",
-      image: require('../../assets/images/onboarding2.png'),
+      title: "News",
+      description: "Receive content with a bias score and make your own analysis",
     },
     {
-      title: "Mantente Informado",
-      description: "Accede a noticias en cualquier momento y lugar",
-      image: require('../../assets/images/onboarding3.png'),
+      title: "Stay Informed",
+      description: "Access news locally, domestically and globally",
     },
   ];
+  
+  // Import useOnboarding at the top of the file
+  const { completeOnboarding } = useOnboarding();
   
   const handleNext = () => {
     if (currentPage < onboardingData.length - 1) {
       setCurrentPage(currentPage + 1);
+      // Restart animation when changing pages
+      if (lottieRef.current) {
+        lottieRef.current.reset();
+        lottieRef.current.play();
+      }
     } else {
-      navigation.navigate('Login');
+      // Mark onboarding as complete
+      completeOnboarding();
+      
+      // Navigate to Auth stack
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Auth' }],
+      });
     }
   };
   
   const handleSkip = () => {
-    navigation.navigate('Login');
+    // Mark onboarding as complete
+    completeOnboarding();
+    
+    // Navigate to Auth stack
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'Auth' }],
+    });
   };
   
   return (
@@ -46,10 +71,15 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation }) => {
       <StatusBar style="auto" />
       
       <View style={styles.content}>
-        {/* Placeholder for image */}
+        {/* Lottie Animation */}
         <View style={styles.imageContainer}>
-          <View style={styles.imagePlaceholder} />
-          {/* <Image source={onboardingData[currentPage].image} style={styles.image} /> */}
+          <LottieView
+            ref={lottieRef}
+            source={welcomeAnimation}
+            autoPlay
+            loop
+            style={styles.animation}
+          />
         </View>
         
         <Text style={styles.title}>{onboardingData[currentPage].title}</Text>
@@ -70,12 +100,12 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation }) => {
       
       <View style={styles.footer}>
         <TouchableOpacity onPress={handleSkip} style={styles.button}>
-          <Text style={styles.buttonText}>Omitir</Text>
+          <Text style={styles.buttonText}>Skip</Text>
         </TouchableOpacity>
         
         <TouchableOpacity onPress={handleNext} style={[styles.button, styles.primaryButton]}>
           <Text style={[styles.buttonText, styles.primaryButtonText]}>
-            {currentPage === onboardingData.length - 1 ? 'Comenzar' : 'Siguiente'}
+            {currentPage === onboardingData.length - 1 ? 'Get Started' : 'Next'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -101,16 +131,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  imagePlaceholder: {
-    width: 250,
-    height: 250,
-    borderRadius: 20,
-    backgroundColor: '#e1e1e1',
-  },
-  image: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'contain',
+  animation: {
+    width: 300,
+    height: 300,
   },
   title: {
     fontSize: 24,
