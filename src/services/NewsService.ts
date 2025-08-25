@@ -209,57 +209,93 @@ export class NewsService {
     }
   }
 
-  // Submit user-generated news - Now creates a real NewsStory immediately
-  async submitUserNews(submission: Omit<UserNewsSubmission, 'id' | 'submittedAt' | 'status'>): Promise<string> {
+  // Submit user-generated news - Enhanced with new fields
+  async submitUserNews(submission: {
+    title: string;
+    primaryUrl: string;
+    summary: string;
+    category: string;
+    submittedBy: string;
+    tags?: string[];
+    additionalSources?: string[];
+    urgencyLevel?: 'normal' | 'breaking' | 'developing';
+    suggestedBias?: 'left' | 'center' | 'right';
+    suggestedCredibility?: number;
+    sourceReputation?: 'verified' | 'questionable' | 'unknown';
+  }): Promise<string> {
     try {
       console.log('🚀 Creating user-generated news story:', submission);
       
-      // Create a full NewsStory object for user-generated content
+      // Create enhanced NewsStory object for user-generated content
+      const allSources = [submission.primaryUrl, ...(submission.additionalSources || [])];
+      const totalSourceCount = allSources.length;
+      
+      // Create sources array
+      const sources = allSources.map((url, index) => {
+        const domain = this.extractDomain(url);
+        return {
+          id: `user-source-${Date.now()}-${index}`,
+          name: index === 0 ? 'Primary Source' : `Additional Source ${index}`,
+          url,
+          bias: submission.suggestedBias || 'center' as const,
+          credibilityScore: submission.suggestedCredibility || this.getSourceCredibilityScore(submission.sourceReputation),
+          publishedAt: new Date()
+        };
+      });
+      
+      // Enhanced bias scoring based on user input and source reputation
+      const biasScore = this.calculateInitialBiasScore(
+        submission.suggestedBias,
+        submission.sourceReputation,
+        totalSourceCount
+      );
+      
       const userGeneratedStory = {
         title: submission.title,
         summary: submission.summary,
-        content: `User-submitted news: ${submission.summary}\n\nSource: ${submission.url}`,
+        content: `User-submitted news: ${submission.summary}\n\nPrimary Source: ${submission.primaryUrl}${submission.additionalSources?.length ? `\n\nAdditional Sources:\n${submission.additionalSources.join('\n')}` : ''}`,
         category: submission.category,
         
-        // Default bias score for user-generated content (will be updated by community votes)
-        biasScore: {
-          left: 33,
-          center: 34,
-          right: 33
-        },
+        // Enhanced bias scoring
+        biasScore,
         
-        // Single source (user-provided URL)
-        totalSources: 1,
-        sources: [{
-          id: `user-source-${Date.now()}`,
-          name: 'User Submission',
-          url: submission.url,
-          bias: 'center' as const,
-          credibilityScore: 3.0, // Neutral starting score
-          publishedAt: new Date()
-        }],
+        // Multiple sources support
+        totalSources: totalSourceCount,
+        sources,
         
-        // Community engagement (starts empty)
+        // Community engagement (starts with user's input or default)
         userVotes: [],
         totalVotes: 0,
-        averageCredibility: 0,
-        averageQuality: 0,
+        averageCredibility: submission.suggestedCredibility || this.getSourceCredibilityScore(submission.sourceReputation),
+        averageQuality: submission.suggestedCredibility || this.getSourceCredibilityScore(submission.sourceReputation),
         
-        // AI analysis (none initially)
-        aiSummary: undefined,
-        aiCredibilityScore: undefined,
-        aiDetectedBias: undefined,
+        // AI analysis (none initially - omitted undefined fields)
         
-        // Metadata
-        isBreaking: false,
-        isTrending: false,
+        // Enhanced metadata
+        isBreaking: submission.urgencyLevel === 'breaking',
+        isTrending: submission.urgencyLevel === 'developing',
         isUserGenerated: true,
         submittedBy: submission.submittedBy,
+        
+        // Enhanced tags and categorization
+        tags: submission.tags || [],
+        urgencyLevel: submission.urgencyLevel || 'normal',
+        sourceReputation: submission.sourceReputation || 'unknown',
+        
+        // Community validation flags
+        communityFlags: {
+          spam: 0,
+          misinformation: 0,
+          duplicate: 0,
+          inappropriate: 0
+        },
+        needsFactCheck: submission.sourceReputation === 'questionable' || !submission.suggestedCredibility,
         
         // Engagement metrics
         viewCount: 0,
         shareCount: 0,
         bookmarkCount: 0,
+        commentCount: 0,
         
         // Timestamps
         createdAt: new Date(),
@@ -270,11 +306,7 @@ export class NewsService {
       const docRef = await addDoc(this.newsCollection, {
         ...userGeneratedStory,
         createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-        sources: userGeneratedStory.sources.map(source => ({
-          ...source,
-          publishedAt: serverTimestamp()
-        }))
+        updatedAt: serverTimestamp()
       });
 
       console.log('✅ User-generated news story created successfully:', docRef.id);
@@ -286,13 +318,13 @@ export class NewsService {
   }
 
   // Get trending topics (could be used for suggestions)
-  async getTrendingTopics(limit = 10): Promise<string[]> {
+  async getTrendingTopics(limitCount = 10): Promise<string[]> {
     try {
       const q = query(
         this.newsCollection,
         where('isTrending', '==', true),
         orderBy('viewCount', 'desc'),
-        limit(limit)
+        limit(limitCount)
       );
 
       const snapshot = await getDocs(q);
@@ -402,6 +434,69 @@ export class NewsService {
       console.error('Error searching news:', error);
       return [];
     }
+  }
+  
+  // Helper functions for enhanced submission handling
+  private extractDomain(url: string): string {
+    try {
+      return new URL(url).hostname.replace('www.', '');
+    } catch {
+      return 'unknown';
+    }
+  }
+  
+  private getSourceCredibilityScore(reputation?: 'verified' | 'questionable' | 'unknown'): number {
+    switch (reputation) {
+      case 'verified': return 4.0;
+      case 'questionable': return 2.0;
+      case 'unknown': 
+      default: return 3.0;
+    }
+  }
+  
+  private calculateInitialBiasScore(
+    suggestedBias?: 'left' | 'center' | 'right',
+    sourceReputation?: 'verified' | 'questionable' | 'unknown',
+    sourceCount: number = 1
+  ): BiasScore {
+    // Base neutral score
+    let biasScore = { left: 33, center: 34, right: 33 };
+    
+    // Adjust based on user's bias assessment
+    if (suggestedBias) {
+      switch (suggestedBias) {
+        case 'left':
+          biasScore = { left: 60, center: 25, right: 15 };
+          break;
+        case 'right':
+          biasScore = { left: 15, center: 25, right: 60 };
+          break;
+        case 'center':
+          biasScore = { left: 20, center: 60, right: 20 };
+          break;
+      }
+    }
+    
+    // Adjust confidence based on source reputation and count
+    const reliabilityFactor = sourceReputation === 'verified' ? 1.2 : 
+                            sourceReputation === 'questionable' ? 0.8 : 1.0;
+    
+    const sourceCountFactor = Math.min(1 + (sourceCount - 1) * 0.1, 1.5);
+    
+    // Apply factors (keep within bounds)
+    const factor = reliabilityFactor * sourceCountFactor;
+    if (factor !== 1.0) {
+      const dominant = suggestedBias || 'center';
+      if (factor > 1.0) {
+        // Increase confidence in the dominant bias
+        biasScore[dominant] = Math.min(biasScore[dominant] * factor, 80);
+      } else {
+        // Decrease confidence, move toward neutral
+        biasScore = { left: 30, center: 40, right: 30 };
+      }
+    }
+    
+    return biasScore;
   }
 }
 

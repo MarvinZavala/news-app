@@ -80,13 +80,31 @@ const NewsCard: React.FC<Props> = ({ story, onPress, onBookmark, onShare }) => {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Text style={styles.category}>{story.category.toUpperCase()}</Text>
+          
+          {/* Enhanced urgency indicators */}
           {story.isBreaking && (
             <View style={styles.breakingBadge}>
-              <Text style={styles.breakingText}>BREAKING</Text>
+              <Text style={styles.breakingText}>🚨 BREAKING</Text>
             </View>
           )}
           {story.isTrending && (
-            <Ionicons name="trending-up" size={14} color="#FF6B6B" />
+            <View style={styles.developingBadge}>
+              <Text style={styles.developingText}>⏳ DEVELOPING</Text>
+            </View>
+          )}
+          
+          {/* Source reputation indicator */}
+          {story.sourceReputation === 'verified' && (
+            <View style={styles.verifiedBadge}>
+              <Ionicons name="checkmark-circle" size={12} color="#10B981" />
+              <Text style={styles.verifiedText}>Verified</Text>
+            </View>
+          )}
+          {story.sourceReputation === 'questionable' && (
+            <View style={styles.questionableBadge}>
+              <Ionicons name="warning" size={12} color="#F59E0B" />
+              <Text style={styles.questionableText}>Questionable</Text>
+            </View>
           )}
         </View>
         <Text style={styles.timeAgo}>{formatTimeAgo(story.createdAt)}</Text>
@@ -100,6 +118,20 @@ const NewsCard: React.FC<Props> = ({ story, onPress, onBookmark, onShare }) => {
       <Text style={styles.summary} numberOfLines={2}>
         {story.summary}
       </Text>
+      
+      {/* Tags display */}
+      {story.tags && story.tags.length > 0 && (
+        <View style={styles.tagsContainer}>
+          {story.tags.slice(0, 3).map((tag: string, index: number) => (
+            <View key={index} style={styles.tag}>
+              <Text style={styles.tagText}>#{tag}</Text>
+            </View>
+          ))}
+          {story.tags.length > 3 && (
+            <Text style={styles.moreTagsText}>+{story.tags.length - 3} more</Text>
+          )}
+        </View>
+      )}
 
       {/* AI Summary (if available) */}
       {story.aiSummary && (
@@ -120,7 +152,10 @@ const NewsCard: React.FC<Props> = ({ story, onPress, onBookmark, onShare }) => {
           <Text style={styles.biasTitle}>Political Coverage</Text>
           <View style={styles.sourceCount}>
             <Ionicons name="newspaper-outline" size={12} color="#666" />
-            <Text style={styles.sourceCountText}>{story.totalSources} sources</Text>
+            <Text style={styles.sourceCountText}>
+              {story.totalSources} {story.totalSources === 1 ? 'source' : 'sources'}
+              {story.totalSources > 1 && ' ✓'}
+            </Text>
           </View>
         </View>
         
@@ -188,6 +223,10 @@ const NewsCard: React.FC<Props> = ({ story, onPress, onBookmark, onShare }) => {
             <Ionicons name="people-outline" size={14} color="#666" />
             <Text style={styles.voteCountText}>{story.totalVotes} votes</Text>
           </View>
+          <View style={styles.commentCount}>
+            <Ionicons name="chatbubble-outline" size={14} color="#666" />
+            <Text style={styles.commentCountText}>{story.commentCount} comments</Text>
+          </View>
         </View>
 
         <View style={styles.actionButtons}>
@@ -211,11 +250,29 @@ const NewsCard: React.FC<Props> = ({ story, onPress, onBookmark, onShare }) => {
         </View>
       </View>
 
-      {/* User generated content indicator */}
+      {/* Enhanced user generated content indicator */}
       {story.isUserGenerated && (
-        <View style={styles.userGeneratedBadge}>
-          <Ionicons name="person" size={10} color="#9B59B6" />
-          <Text style={styles.userGeneratedText}>Community Submitted</Text>
+        <View style={styles.userGeneratedSection}>
+          <View style={styles.userGeneratedBadge}>
+            <Ionicons name="people" size={10} color="#9B59B6" />
+            <Text style={styles.userGeneratedText}>Community Submitted</Text>
+          </View>
+          
+          {/* Community validation indicators */}
+          {story.needsFactCheck && (
+            <View style={styles.factCheckBadge}>
+              <Ionicons name="search" size={10} color="#F59E0B" />
+              <Text style={styles.factCheckText}>Fact Check Needed</Text>
+            </View>
+          )}
+          
+          {/* Additional sources indicator */}
+          {story.totalSources > 1 && (
+            <View style={styles.multiSourceBadge}>
+              <Ionicons name="link" size={10} color="#10B981" />
+              <Text style={styles.multiSourceText}>Multiple Sources</Text>
+            </View>
+          )}
         </View>
       )}
     </TouchableOpacity>
@@ -268,6 +325,45 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: 'bold',
   },
+  developingBadge: {
+    backgroundColor: '#F59E0B',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  developingText: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: 'bold',
+  },
+  verifiedBadge: {
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  verifiedText: {
+    color: '#059669',
+    fontSize: 9,
+    fontWeight: 'bold',
+  },
+  questionableBadge: {
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  questionableText: {
+    color: '#D97706',
+    fontSize: 9,
+    fontWeight: 'bold',
+  },
   timeAgo: {
     fontSize: 11,
     color: '#999',
@@ -285,7 +381,33 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     lineHeight: 20,
+    marginBottom: 8,
+  },
+  
+  // Tags styles
+  tagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
     marginBottom: 16,
+  },
+  tag: {
+    backgroundColor: '#F0F9FF',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+  },
+  tagText: {
+    fontSize: 11,
+    color: '#0369A1',
+    fontWeight: '600',
+  },
+  moreTagsText: {
+    fontSize: 11,
+    color: '#666',
+    fontStyle: 'italic',
   },
 
   // AI Summary styles
@@ -382,12 +504,22 @@ const styles = StyleSheet.create({
   votingContainer: {
     flex: 1,
     alignItems: 'center',
+    gap: 4,
   },
   voteCount: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   voteCountText: {
+    fontSize: 11,
+    color: '#666',
+    marginLeft: 4,
+  },
+  commentCount: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  commentCountText: {
     fontSize: 11,
     color: '#666',
     marginLeft: 4,
@@ -402,11 +534,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8F9FA',
   },
 
-  // User generated content
-  userGeneratedBadge: {
+  // Enhanced user generated content
+  userGeneratedSection: {
     position: 'absolute',
     top: 8,
     right: 8,
+    gap: 4,
+  },
+  userGeneratedBadge: {
     backgroundColor: '#F3E8FF',
     paddingHorizontal: 6,
     paddingVertical: 3,
@@ -417,6 +552,34 @@ const styles = StyleSheet.create({
   userGeneratedText: {
     fontSize: 9,
     color: '#9B59B6',
+    fontWeight: 'bold',
+    marginLeft: 3,
+  },
+  factCheckBadge: {
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  factCheckText: {
+    fontSize: 9,
+    color: '#D97706',
+    fontWeight: 'bold',
+    marginLeft: 3,
+  },
+  multiSourceBadge: {
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  multiSourceText: {
+    fontSize: 9,
+    color: '#059669',
     fontWeight: 'bold',
     marginLeft: 3,
   },

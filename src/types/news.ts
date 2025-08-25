@@ -22,6 +22,44 @@ export interface UserVote {
   votedAt: Date;
 }
 
+// Comment system interfaces
+export interface Comment {
+  id: string;
+  newsStoryId: string;
+  userId: string;
+  userName: string;
+  userAvatar?: string;
+  content: string;
+  
+  // Engagement
+  likes: number;
+  dislikes: number;
+  likedBy: string[]; // userIds
+  dislikedBy: string[]; // userIds
+  
+  // Moderation
+  isReported: boolean;
+  reportCount: number;
+  isHidden: boolean;
+  moderatedBy?: string;
+  
+  // Metadata
+  createdAt: Date;
+  updatedAt: Date;
+  isEdited: boolean;
+  
+  // Threading (for replies)
+  parentCommentId?: string; // null for top-level comments
+  replies: Comment[];
+  replyCount: number;
+}
+
+export interface CommentSubmission {
+  newsStoryId: string;
+  content: string;
+  parentCommentId?: string; // For replies
+}
+
 export interface NewsStory {
   id: string;
   title: string;
@@ -45,11 +83,23 @@ export interface NewsStory {
   aiCredibilityScore?: number; // 0-1
   aiDetectedBias?: 'left' | 'center' | 'right';
   
-  // Metadata
+  // Enhanced metadata (from new submission system)
   isBreaking: boolean;
   isTrending: boolean;
   isUserGenerated: boolean;
   submittedBy?: string; // userId for user-generated content
+  
+  // New fields from enhanced submission
+  tags?: string[];
+  urgencyLevel?: 'normal' | 'breaking' | 'developing';
+  sourceReputation?: 'verified' | 'questionable' | 'unknown';
+  communityFlags?: {
+    spam: number;
+    misinformation: number;
+    duplicate: number;
+    inappropriate: number;
+  };
+  needsFactCheck?: boolean;
   
   createdAt: Date;
   updatedAt: Date;
@@ -58,20 +108,47 @@ export interface NewsStory {
   viewCount: number;
   shareCount: number;
   bookmarkCount: number;
+  
+  // Comments
+  commentCount: number;
+  comments?: Comment[]; // Loaded separately for performance
 }
 
 export interface UserNewsSubmission {
   id: string;
   title: string;
-  url: string;
+  primaryUrl: string; // Main source URL
   summary: string;
   category: string;
+  
+  // Enhanced submission fields
+  tags: string[]; // Relevant tags/keywords
+  suggestedBias?: 'left' | 'center' | 'right'; // User's bias assessment
+  suggestedCredibility?: number; // 1-5 rating
+  additionalSources?: string[]; // Additional URLs for same story
+  urgencyLevel: 'normal' | 'breaking' | 'developing';
+  
+  // Verification fields
+  isFactCheckRequired: boolean;
+  hasMultipleSources: boolean;
+  sourceReputation: 'verified' | 'questionable' | 'unknown';
+  
+  // Metadata
   submittedBy: string; // userId
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected' | 'needs_review';
   submittedAt: Date;
   moderatedAt?: Date;
   moderatedBy?: string;
   rejectionReason?: string;
+  
+  // Community feedback during review
+  communityFlags: {
+    spam: number;
+    misinformation: number;
+    duplicate: number;
+    inappropriate: number;
+  };
+  reviewNotes?: string;
 }
 
 // For real-time updates
@@ -81,6 +158,19 @@ export interface NewsListResponse {
   hasMore: boolean;
 }
 
+// Note: UserNewsSubmissionForm is now defined in navigation.ts to avoid circular dependencies
+
+// Source reputation database
+export interface SourceReputation {
+  domain: string;
+  name: string;
+  overallBias: 'left' | 'center' | 'right';
+  credibilityScore: number; // 1-5
+  factualReporting: 'very_high' | 'high' | 'mostly_factual' | 'mixed' | 'low';
+  isVerified: boolean;
+  notes?: string;
+}
+
 // Filter and search options
 export interface NewsFilters {
   category?: string;
@@ -88,4 +178,6 @@ export interface NewsFilters {
   timeRange?: 'hour' | 'day' | 'week' | 'month';
   sortBy?: 'newest' | 'trending' | 'mostVoted' | 'controversial';
   minCredibility?: number;
+  sourceReputation?: 'verified' | 'questionable' | 'unknown';
+  urgencyLevel?: 'normal' | 'breaking' | 'developing';
 }

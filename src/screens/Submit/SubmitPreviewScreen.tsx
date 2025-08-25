@@ -41,10 +41,16 @@ const SubmitPreviewScreen: React.FC<Props> = ({ navigation, route }) => {
       // Submit to Firebase via NewsService
       const submissionId = await newsService.submitUserNews({
         title: newsData.title,
-        url: newsData.url,
+        primaryUrl: newsData.primaryUrl,
         summary: newsData.summary,
         category: newsData.category,
         submittedBy: user.uid,
+        tags: newsData.tags,
+        additionalSources: newsData.additionalSources,
+        urgencyLevel: newsData.urgencyLevel,
+        suggestedBias: newsData.suggestedBias,
+        suggestedCredibility: newsData.suggestedCredibility,
+        sourceReputation: newsData.sourceReputation,
       });
 
       console.log('✅ News submitted successfully:', submissionId);
@@ -70,7 +76,7 @@ const SubmitPreviewScreen: React.FC<Props> = ({ navigation, route }) => {
   };
 
   const handleOpenUrl = () => {
-    Linking.openURL(newsData.url);
+    Linking.openURL(newsData.primaryUrl);
   };
 
   const getCategoryColor = (category: string): string => {
@@ -144,7 +150,7 @@ const SubmitPreviewScreen: React.FC<Props> = ({ navigation, route }) => {
             <TouchableOpacity style={styles.urlPreview} onPress={handleOpenUrl}>
               <Ionicons name="link-outline" size={16} color="#1DA1F2" />
               <Text style={styles.urlText} numberOfLines={1}>
-                {newsData.url}
+                {newsData.primaryUrl}
               </Text>
               <Ionicons name="open-outline" size={14} color="#666" />
             </TouchableOpacity>

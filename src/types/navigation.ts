@@ -44,12 +44,7 @@ export type HomeStackParamList = {
 export type SubmitStackParamList = {
   SubmitNewsScreen: undefined; // Main submission form
   SubmitPreview: {
-    newsData: {
-      title: string;
-      url: string;
-      summary: string;
-      category: string;
-    };
+    newsData: UserNewsSubmissionForm;
   };
   SubmitSuccess: {
     newsId: string;
@@ -103,8 +98,15 @@ export interface SearchFilters {
 // User-generated content types
 export interface UserNewsSubmissionForm {
   title: string;
-  url: string;
+  primaryUrl: string;
   summary: string;
   category: string;
-  tags?: string[];
+  tags: string[];
+  additionalSources: string[];
+  urgencyLevel: 'normal' | 'breaking' | 'developing';
+  sourceReputation: 'verified' | 'questionable' | 'unknown';
+  hasMultipleSources: boolean;
+  suggestedBias?: 'left' | 'center' | 'right';
+  suggestedCredibility?: number;
+  factCheckNotes?: string;
 }
