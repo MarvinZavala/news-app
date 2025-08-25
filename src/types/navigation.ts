@@ -16,7 +16,7 @@ export type AuthStackParamList = {
 
 // Main tabs navigation - with Submit News feature
 export type MainTabParamList = {
-  HomeTab: NavigatorScreenParams<HomeStackParamList>; // Main news feed
+  NewsTab: NavigatorScreenParams<NewsStackParamList>; // Main news feed (renamed from Home)
   SubmitTab: NavigatorScreenParams<SubmitStackParamList>; // Submit news (authenticated only)
   SearchTab: NavigatorScreenParams<SearchStackParamList>;
   BookmarksTab: NavigatorScreenParams<BookmarksStackParamList>;
@@ -24,8 +24,8 @@ export type MainTabParamList = {
 };
 
 // Individual stack parameter lists
-export type HomeStackParamList = {
-  HomeScreen: undefined; // Main news feed with bias scoring
+export type NewsStackParamList = {
+  NewsList: undefined; // Main news feed with bias scoring
   NewsDetails: { 
     newsId: string; 
     title: string; 
@@ -39,6 +39,9 @@ export type HomeStackParamList = {
     title: string;
   };
 };
+
+// Legacy compatibility (keeping for now)
+export type HomeStackParamList = NewsStackParamList;
 
 // Submit news stack - for user-generated content
 export type SubmitStackParamList = {
@@ -66,7 +69,9 @@ export type SearchStackParamList = {
 export type BookmarksStackParamList = {
   BookmarksList: undefined;
   BookmarkDetails: { 
-    bookmarkId: string; 
+    bookmarkId: string;
+    newsId: string;
+    title: string;
   };
   BookmarkCategories: undefined;
   ReadLater: undefined;

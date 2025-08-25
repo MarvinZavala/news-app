@@ -1,13 +1,16 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { NewsStory } from '../types/news';
+import { bookmarkService } from '../services/BookmarkService';
+import { useAuth } from '../context/AuthContext';
 
 interface Props {
   story: NewsStory;
@@ -19,6 +22,46 @@ interface Props {
 const { width: screenWidth } = Dimensions.get('window');
 
 const NewsCard: React.FC<Props> = ({ story, onPress, onBookmark, onShare }) => {
+  const { user } = useAuth();
+  const [isBookmarked, setIsBookmarked] = useState(false);
+  const [bookmarkLoading, setBookmarkLoading] = useState(false);
+
+  // Check bookmark status on mount
+  useEffect(() => {
+    checkBookmarkStatus();
+  }, [story.id, user]);
+
+  const checkBookmarkStatus = async () => {
+    if (!user) return;
+    
+    try {
+      const bookmarked = await bookmarkService.isBookmarked(user.uid, story.id);
+      setIsBookmarked(bookmarked);
+    } catch (error) {
+      console.error('Error checking bookmark status:', error);
+    }
+  };
+
+  const handleBookmarkPress = async () => {
+    if (bookmarkLoading) return;
+    
+    setBookmarkLoading(true);
+    
+    // Call parent handler
+    if (onBookmark) {
+      await onBookmark(story);
+      // Recheck bookmark status after parent handler
+      await checkBookmarkStatus();
+    }
+    
+    setBookmarkLoading(false);
+  };
+
+  const handleSharePress = () => {
+    if (onShare) {
+      onShare(story);
+    }
+  };
   const formatTimeAgo = (date: Date): string => {
     const now = new Date();
     const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
@@ -232,17 +275,30 @@ const NewsCard: React.FC<Props> = ({ story, onPress, onBookmark, onShare }) => {
         <View style={styles.actionButtons}>
           {onBookmark && (
             <TouchableOpacity 
-              style={styles.actionButton}
-              onPress={() => onBookmark(story)}
+              style={[
+                styles.actionButton,
+                isBookmarked && styles.actionButtonBookmarked,
+                bookmarkLoading && styles.actionButtonDisabled
+              ]}
+              onPress={handleBookmarkPress}
+              disabled={bookmarkLoading}
             >
-              <Ionicons name="bookmark-outline" size={16} color="#666" />
+              {bookmarkLoading ? (
+                <ActivityIndicator size="small" color="#666" />
+              ) : (
+                <Ionicons 
+                  name={isBookmarked ? "bookmark" : "bookmark-outline"} 
+                  size={16} 
+                  color={isBookmarked ? "#1DA1F2" : "#666"} 
+                />
+              )}
             </TouchableOpacity>
           )}
           
           {onShare && (
             <TouchableOpacity 
               style={styles.actionButton}
-              onPress={() => onShare(story)}
+              onPress={handleSharePress}
             >
               <Ionicons name="share-outline" size={16} color="#666" />
             </TouchableOpacity>
@@ -532,6 +588,12 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 6,
     backgroundColor: '#F8F9FA',
+  },
+  actionButtonBookmarked: {
+    backgroundColor: '#EBF8FF',
+  },
+  actionButtonDisabled: {
+    opacity: 0.5,
   },
 
   // Enhanced user generated content

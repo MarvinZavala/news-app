@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Share, Linking, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Share, Linking, Dimensions, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -7,6 +7,7 @@ import { RouteProp } from '@react-navigation/native';
 import { NewsStackParamList } from '../../types/navigation';
 import { NewsStory } from '../../types/news';
 import { newsService } from '../../services/NewsService';
+import { bookmarkService } from '../../services/BookmarkService';
 import CommentSection from '../../components/CommentSection';
 import CommunityVoting from '../../components/CommunityVoting';
 import { useAuth } from '../../context/AuthContext';
@@ -24,11 +25,24 @@ const NewsDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
   const [story, setStory] = useState<NewsStory | null>(null);
   const [loading, setLoading] = useState(true);
   const [isBookmarked, setIsBookmarked] = useState(false);
+  const [bookmarkLoading, setBookmarkLoading] = useState(false);
   const [scrollY, setScrollY] = useState(0);
 
   useEffect(() => {
     loadStory();
+    checkBookmarkStatus();
   }, [newsId]);
+
+  const checkBookmarkStatus = async () => {
+    if (!user) return;
+    
+    try {
+      const bookmarked = await bookmarkService.isBookmarked(user.uid, newsId);
+      setIsBookmarked(bookmarked);
+    } catch (error) {
+      console.error('Error checking bookmark status:', error);
+    }
+  };
 
   const loadStory = async () => {
     try {
@@ -70,9 +84,35 @@ const NewsDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
     }
   };
 
-  const handleBookmark = () => {
-    setIsBookmarked(!isBookmarked);
-    // TODO: Implement bookmark service
+  const handleBookmark = async () => {
+    if (!user || !story || bookmarkLoading) return;
+
+    setBookmarkLoading(true);
+    
+    try {
+      if (isBookmarked) {
+        // Find existing bookmark and remove it
+        const bookmarks = await bookmarkService.getBookmarksForUser(user.uid);
+        const existingBookmark = bookmarks.find(b => b.newsStoryId === story.id);
+        
+        if (existingBookmark) {
+          await bookmarkService.removeBookmark(user.uid, existingBookmark.id);
+          setIsBookmarked(false);
+        }
+      } else {
+        // Add bookmark
+        await bookmarkService.addBookmark(user.uid, story, {
+          tags: story.tags || [],
+          priority: story.isBreaking ? 'urgent' : story.isTrending ? 'high' : 'normal'
+        });
+        setIsBookmarked(true);
+      }
+    } catch (error) {
+      console.error('Error toggling bookmark:', error);
+      Alert.alert('Error', 'Failed to update bookmark. Please try again.');
+    } finally {
+      setBookmarkLoading(false);
+    }
   };
 
   const handleOpenSource = (url: string) => {
@@ -126,12 +166,20 @@ const NewsDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
           {story?.title}
         </Text>
         <View style={styles.headerActions}>
-          <TouchableOpacity style={styles.headerButton} onPress={handleBookmark}>
-            <Ionicons 
-              name={isBookmarked ? "bookmark" : "bookmark-outline"} 
-              size={22} 
-              color={isBookmarked ? "#1DA1F2" : "#666"} 
-            />
+          <TouchableOpacity 
+            style={[styles.headerButton, bookmarkLoading && styles.headerButtonDisabled]} 
+            onPress={handleBookmark}
+            disabled={bookmarkLoading}
+          >
+            {bookmarkLoading ? (
+              <ActivityIndicator size="small" color="#666" />
+            ) : (
+              <Ionicons 
+                name={isBookmarked ? "bookmark" : "bookmark-outline"} 
+                size={22} 
+                color={isBookmarked ? "#1DA1F2" : "#666"} 
+              />
+            )}
           </TouchableOpacity>
           <TouchableOpacity style={styles.headerButton} onPress={handleShare}>
             <Ionicons name="share-outline" size={22} color="#666" />
@@ -203,13 +251,23 @@ const NewsDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
           
           {/* Action Bar */}
           <View style={styles.actionBar}>
-            <TouchableOpacity style={styles.actionButton} onPress={handleBookmark}>
-              <Ionicons 
-                name={isBookmarked ? "bookmark" : "bookmark-outline"} 
-                size={20} 
-                color={isBookmarked ? "#1DA1F2" : "#666"} 
-              />
-              <Text style={[styles.actionText, isBookmarked && styles.actionTextActive]}>Save</Text>
+            <TouchableOpacity 
+              style={[styles.actionButton, bookmarkLoading && styles.actionButtonDisabled]} 
+              onPress={handleBookmark}
+              disabled={bookmarkLoading}
+            >
+              {bookmarkLoading ? (
+                <ActivityIndicator size="small" color="#666" />
+              ) : (
+                <Ionicons 
+                  name={isBookmarked ? "bookmark" : "bookmark-outline"} 
+                  size={20} 
+                  color={isBookmarked ? "#1DA1F2" : "#666"} 
+                />
+              )}
+              <Text style={[styles.actionText, isBookmarked && styles.actionTextActive]}>
+                {isBookmarked ? 'Saved' : 'Save'}
+              </Text>
             </TouchableOpacity>
             
             <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
@@ -401,6 +459,12 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  headerButtonDisabled: {
+    opacity: 0.5,
+  },
+  actionButtonDisabled: {
+    opacity: 0.5,
   },
   
   // Hero Section

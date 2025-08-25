@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   Alert,
+  Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,6 +16,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { NewsStackParamList } from '../../types/navigation';
 import { NewsStory, NewsFilters } from '../../types/news';
 import { newsService } from '../../services/NewsService';
+import { bookmarkService } from '../../services/BookmarkService';
 import NewsCard from '../../components/NewsCard';
 import { useAuth } from '../../context/AuthContext';
 
@@ -72,22 +74,49 @@ const NewsListScreen: React.FC<Props> = ({ navigation }) => {
 
   // Handle bookmark
   const handleBookmark = useCallback(async (story: NewsStory) => {
+    if (!user) {
+      Alert.alert('Sign In Required', 'Please sign in to bookmark articles.');
+      return;
+    }
+
     try {
-      // TODO: Implement bookmarking functionality
-      Alert.alert('Bookmarked', `"${story.title}" has been bookmarked!`);
+      // Check if already bookmarked
+      const isBookmarked = await bookmarkService.isBookmarked(user.uid, story.id);
+      
+      if (isBookmarked) {
+        // Find and remove existing bookmark
+        const bookmarks = await bookmarkService.getBookmarksForUser(user.uid);
+        const existingBookmark = bookmarks.find(b => b.newsStoryId === story.id);
+        
+        if (existingBookmark) {
+          await bookmarkService.removeBookmark(user.uid, existingBookmark.id);
+          Alert.alert('Removed', `"${story.title}" removed from bookmarks.`);
+        }
+      } else {
+        // Add bookmark
+        await bookmarkService.addBookmark(user.uid, story, {
+          tags: story.tags || [],
+          priority: story.isBreaking ? 'urgent' : story.isTrending ? 'high' : 'normal'
+        });
+        Alert.alert('Bookmarked', `"${story.title}" has been bookmarked!`);
+      }
     } catch (error) {
       console.error('Error bookmarking story:', error);
       Alert.alert('Error', 'Failed to bookmark story. Please try again.');
     }
-  }, []);
+  }, [user]);
 
   // Handle share
   const handleShare = useCallback(async (story: NewsStory) => {
     try {
       // Increment share count
       await newsService.incrementShareCount(story.id);
-      // TODO: Implement share functionality
-      Alert.alert('Shared', `"${story.title}" has been shared!`);
+      
+      // Native sharing
+      await Share.share({
+        message: `${story.title}\n\n${story.summary}\n\nRead more on NewsApp`,
+        title: story.title,
+      });
     } catch (error) {
       console.error('Error sharing story:', error);
       Alert.alert('Error', 'Failed to share story. Please try again.');
