@@ -7,10 +7,13 @@ import {
   Alert,
   ActivityIndicator,
   Animated,
+  Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { votingService } from '../services/VotingService';
 import { useAuth } from '../context/AuthContext';
+
+const { width: screenWidth } = Dimensions.get('window');
 
 interface Props {
   newsStoryId: string;
@@ -123,9 +126,9 @@ const CommunityVoting: React.FC<Props> = ({ newsStoryId, onVoteUpdate }) => {
 
   const getBiasColor = (bias: 'left' | 'center' | 'right'): string => {
     switch (bias) {
-      case 'left': return '#EF4444';
-      case 'center': return '#6B7280';
-      case 'right': return '#3B82F6';
+      case 'left': return '#DC2626';
+      case 'center': return '#64748B';
+      case 'right': return '#2563EB';
     }
   };
 
@@ -171,15 +174,28 @@ const CommunityVoting: React.FC<Props> = ({ newsStoryId, onVoteUpdate }) => {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Ionicons name="people" size={24} color="#1DA1F2" />
-          <View>
+      {/* Enhanced Header Card */}
+      <View style={styles.headerCard}>
+        <View style={styles.headerContent}>
+          <View style={styles.iconContainer}>
+            <Ionicons name="people" size={28} color="#1DA1F2" />
+          </View>
+          <View style={styles.headerInfo}>
             <Text style={styles.headerTitle}>Community Assessment</Text>
-            <Text style={styles.headerSubtitle}>
-              {stats.totalVotes} {stats.totalVotes === 1 ? 'vote' : 'votes'}
-            </Text>
+            <View style={styles.statsRow}>
+              <View style={styles.statChip}>
+                <Ionicons name="bar-chart" size={14} color="#666" />
+                <Text style={styles.headerSubtitle}>
+                  {stats.totalVotes} {stats.totalVotes === 1 ? 'vote' : 'votes'}
+                </Text>
+              </View>
+              {stats.totalVotes > 0 && (
+                <View style={styles.statChip}>
+                  <Ionicons name="checkmark-circle" size={14} color="#10B981" />
+                  <Text style={styles.participationText}>Active</Text>
+                </View>
+              )}
+            </View>
           </View>
         </View>
         
@@ -193,172 +209,317 @@ const CommunityVoting: React.FC<Props> = ({ newsStoryId, onVoteUpdate }) => {
           >
             <Ionicons 
               name={stats.userVote ? "checkmark" : "add"} 
-              size={16} 
+              size={18} 
               color="#fff" 
             />
             <Text style={styles.voteButtonText}>
-              {stats.userVote ? 'Update Vote' : 'Vote'}
+              {stats.userVote ? 'Update' : 'Vote'}
             </Text>
           </TouchableOpacity>
         )}
       </View>
 
-      {/* Bias Distribution */}
-      <View style={styles.biasSection}>
-        <Text style={styles.sectionTitle}>Political Bias Coverage</Text>
+      {/* Enhanced Bias Distribution Card */}
+      <View style={styles.biasCard}>
+        <View style={styles.sectionHeader}>
+          <View style={styles.sectionTitleRow}>
+            <Ionicons name="analytics" size={20} color="#666" />
+            <Text style={styles.sectionTitle}>Political Coverage Analysis</Text>
+          </View>
+          {stats.totalVotes > 0 && (
+            <View style={styles.reliabilityBadge}>
+              <Text style={styles.reliabilityText}>
+                {stats.totalVotes > 10 ? 'High' : stats.totalVotes > 5 ? 'Medium' : 'Low'} confidence
+              </Text>
+            </View>
+          )}
+        </View>
         
-        <View style={styles.biasBarContainer}>
-          {(['left', 'center', 'right'] as const).map((bias) => (
-            <View key={bias} style={styles.biasItem}>
-              <View style={styles.biasHeader}>
-                <View style={styles.biasLabelContainer}>
-                  <Ionicons 
-                    name={getBiasIcon(bias)} 
-                    size={14} 
-                    color={getBiasColor(bias)} 
-                  />
-                  <Text style={[styles.biasLabel, { color: getBiasColor(bias) }]}>
-                    {bias.charAt(0).toUpperCase() + bias.slice(1)}
-                  </Text>
+        <View style={styles.biasVisualization}>
+          {/* Combined Bias Bar */}
+          <View style={styles.combinedBiasBar}>
+            <Animated.View 
+              style={[
+                styles.combinedSegment,
+                {
+                  flex: stats.biasDistribution.left,
+                  backgroundColor: getBiasColor('left'),
+                  opacity: slideAnim,
+                }
+              ]}
+            />
+            <Animated.View 
+              style={[
+                styles.combinedSegment,
+                {
+                  flex: stats.biasDistribution.center,
+                  backgroundColor: getBiasColor('center'),
+                  opacity: slideAnim,
+                }
+              ]}
+            />
+            <Animated.View 
+              style={[
+                styles.combinedSegment,
+                {
+                  flex: stats.biasDistribution.right,
+                  backgroundColor: getBiasColor('right'),
+                  opacity: slideAnim,
+                }
+              ]}
+            />
+          </View>
+          
+          {/* Individual Bias Items */}
+          <View style={styles.biasItemsGrid}>
+            {(['left', 'center', 'right'] as const).map((bias) => (
+              <View key={bias} style={styles.biasItem}>
+                <View style={styles.biasIconContainer}>
+                  <View style={[styles.biasIconCircle, { backgroundColor: getBiasColor(bias) }]}>
+                    <Ionicons 
+                      name={getBiasIcon(bias)} 
+                      size={16} 
+                      color="#fff" 
+                    />
+                  </View>
                 </View>
-                <Text style={styles.biasPercentage}>
+                <Text style={styles.biasLabel}>
+                  {bias.charAt(0).toUpperCase() + bias.slice(1)}
+                </Text>
+                <Text style={[styles.biasPercentage, { color: getBiasColor(bias) }]}>
                   {stats.biasDistribution[bias]}%
                 </Text>
               </View>
-              
+            ))}
+          </View>
+        </View>
+      </View>
+
+      {/* Enhanced Quality Metrics Card */}
+      <View style={styles.metricsCard}>
+        <View style={styles.metricsHeader}>
+          <Ionicons name="trophy" size={20} color="#F59E0B" />
+          <Text style={styles.metricsTitle}>Quality Assessment</Text>
+        </View>
+        
+        <View style={styles.metricsGrid}>
+          <View style={styles.metricCard}>
+            <View style={styles.metricIconContainer}>
+              <Ionicons name="shield-checkmark" size={24} color="#10B981" />
+            </View>
+            <Text style={styles.metricLabel}>Credibility</Text>
+            <View style={styles.metricStarsRow}>
+              {renderStars(Math.round(stats.averageCredibility))}
+            </View>
+            <Text style={styles.metricScore}>
+              {stats.averageCredibility.toFixed(1)}/5.0
+            </Text>
+            <View style={styles.metricBar}>
               <Animated.View 
                 style={[
-                  styles.biasBar,
+                  styles.metricBarFill,
                   {
                     width: slideAnim.interpolate({
                       inputRange: [0, 1],
-                      outputRange: ['0%', `${Math.max(5, stats.biasDistribution[bias])}%`]
+                      outputRange: ['0%', `${(stats.averageCredibility / 5) * 100}%`]
                     }),
-                    backgroundColor: getBiasColor(bias),
+                    backgroundColor: '#10B981',
                   }
                 ]}
               />
             </View>
-          ))}
-        </View>
-      </View>
-
-      {/* Quality Metrics */}
-      <View style={styles.metricsSection}>
-        <View style={styles.metric}>
-          <View style={styles.metricHeader}>
-            <Ionicons name="shield-checkmark" size={18} color="#10B981" />
-            <Text style={styles.metricLabel}>Credibility</Text>
           </View>
-          <View style={styles.metricValue}>
-            {renderStars(Math.round(stats.averageCredibility))}
-            <Text style={styles.metricScore}>
-              {stats.averageCredibility.toFixed(1)}/5
-            </Text>
-          </View>
-        </View>
 
-        <View style={styles.metric}>
-          <View style={styles.metricHeader}>
-            <Ionicons name="ribbon" size={18} color="#F59E0B" />
+          <View style={styles.metricCard}>
+            <View style={styles.metricIconContainer}>
+              <Ionicons name="ribbon" size={24} color="#F59E0B" />
+            </View>
             <Text style={styles.metricLabel}>Quality</Text>
-          </View>
-          <View style={styles.metricValue}>
-            {renderStars(Math.round(stats.averageQuality))}
+            <View style={styles.metricStarsRow}>
+              {renderStars(Math.round(stats.averageQuality))}
+            </View>
             <Text style={styles.metricScore}>
-              {stats.averageQuality.toFixed(1)}/5
+              {stats.averageQuality.toFixed(1)}/5.0
             </Text>
+            <View style={styles.metricBar}>
+              <Animated.View 
+                style={[
+                  styles.metricBarFill,
+                  {
+                    width: slideAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ['0%', `${(stats.averageQuality / 5) * 100}%`]
+                    }),
+                    backgroundColor: '#F59E0B',
+                  }
+                ]}
+              />
+            </View>
           </View>
         </View>
       </View>
 
-      {/* Voting Panel */}
+      {/* Simplified Voting Panel */}
       {showVotingPanel && user && (
         <View style={styles.votingPanel}>
-          <Text style={styles.votingTitle}>Cast Your Vote</Text>
+          <View style={styles.votingHeader}>
+            <Text style={styles.votingTitle}>Quick Assessment</Text>
+            <TouchableOpacity 
+              style={styles.closeButton}
+              onPress={() => setShowVotingPanel(false)}
+            >
+              <Ionicons name="close" size={20} color="#64748B" />
+            </TouchableOpacity>
+          </View>
           
-          {/* Bias Selection */}
-          <View style={styles.votingSection}>
-            <Text style={styles.votingLabel}>How do you perceive the bias?</Text>
-            <View style={styles.biasOptions}>
+          {/* Step 1: Bias Selection */}
+          <View style={styles.votingStep}>
+            <View style={styles.stepHeader}>
+              <Text style={styles.stepNumber}>1</Text>
+              <Text style={styles.stepTitle}>What's the political lean?</Text>
+            </View>
+            <View style={styles.simplebiasOptions}>
               {(['left', 'center', 'right'] as const).map((bias) => (
                 <TouchableOpacity
                   key={bias}
                   style={[
-                    styles.biasOption,
-                    selectedBias === bias && styles.biasOptionSelected,
-                    { borderColor: getBiasColor(bias) }
+                    styles.simplebiasButton,
+                    selectedBias === bias && styles.simplebiasButtonSelected
                   ]}
                   onPress={() => setSelectedBias(bias)}
                 >
-                  <Ionicons 
-                    name={getBiasIcon(bias)} 
-                    size={20} 
-                    color={selectedBias === bias ? '#fff' : getBiasColor(bias)} 
-                  />
                   <Text style={[
-                    styles.biasOptionText,
-                    selectedBias === bias && styles.biasOptionTextSelected
+                    styles.simplebiasText,
+                    selectedBias === bias && styles.simplebiasTextSelected
                   ]}>
                     {bias.charAt(0).toUpperCase() + bias.slice(1)}
                   </Text>
+                  {selectedBias === bias && (
+                    <Ionicons name="checkmark" size={16} color="#fff" />
+                  )}
                 </TouchableOpacity>
               ))}
             </View>
           </View>
 
-          {/* Credibility Rating */}
-          <View style={styles.votingSection}>
-            <Text style={styles.votingLabel}>Rate the credibility (1-5 stars)</Text>
-            {renderStars(credibilityRating, setCredibilityRating, true)}
+          {/* Step 2: Credibility */}
+          <View style={styles.votingStep}>
+            <View style={styles.stepHeader}>
+              <Text style={styles.stepNumber}>2</Text>
+              <Text style={styles.stepTitle}>How credible is this?</Text>
+            </View>
+            <View style={styles.ratingRow}>
+              <Text style={styles.ratingLabel}>Poor</Text>
+              <View style={styles.starsRow}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <TouchableOpacity
+                    key={star}
+                    onPress={() => setCredibilityRating(star)}
+                    style={styles.starButton}
+                  >
+                    <Ionicons
+                      name={star <= credibilityRating ? "star" : "star-outline"}
+                      size={32}
+                      color={star <= credibilityRating ? "#FFD700" : "#E2E8F0"}
+                    />
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <Text style={styles.ratingLabel}>Great</Text>
+            </View>
+            {credibilityRating > 0 && (
+              <Text style={styles.ratingFeedback}>
+                {credibilityRating <= 2 ? 'Low credibility' :
+                 credibilityRating <= 3 ? 'Moderate' :
+                 credibilityRating <= 4 ? 'Good' : 'Excellent'}
+              </Text>
+            )}
           </View>
 
-          {/* Quality Rating */}
-          <View style={styles.votingSection}>
-            <Text style={styles.votingLabel}>Rate the overall quality (1-5 stars)</Text>
-            {renderStars(qualityRating, setQualityRating, true)}
+          {/* Step 3: Quality */}
+          <View style={styles.votingStep}>
+            <View style={styles.stepHeader}>
+              <Text style={styles.stepNumber}>3</Text>
+              <Text style={styles.stepTitle}>Overall quality?</Text>
+            </View>
+            <View style={styles.ratingRow}>
+              <Text style={styles.ratingLabel}>Poor</Text>
+              <View style={styles.starsRow}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <TouchableOpacity
+                    key={star}
+                    onPress={() => setQualityRating(star)}
+                    style={styles.starButton}
+                  >
+                    <Ionicons
+                      name={star <= qualityRating ? "star" : "star-outline"}
+                      size={32}
+                      color={star <= qualityRating ? "#FFD700" : "#E2E8F0"}
+                    />
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <Text style={styles.ratingLabel}>Great</Text>
+            </View>
+            {qualityRating > 0 && (
+              <Text style={styles.ratingFeedback}>
+                {qualityRating <= 2 ? 'Poor quality' :
+                 qualityRating <= 3 ? 'Average' :
+                 qualityRating <= 4 ? 'Good' : 'Outstanding'}
+              </Text>
+            )}
           </View>
 
           {/* Submit Button */}
-          <View style={styles.votingActions}>
-            <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={() => setShowVotingPanel(false)}
-            >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={[
-                styles.submitButton,
-                (!selectedBias || credibilityRating === 0 || qualityRating === 0 || submitting) && 
-                styles.submitButtonDisabled
-              ]}
-              onPress={handleSubmitVote}
-              disabled={!selectedBias || credibilityRating === 0 || qualityRating === 0 || submitting}
-            >
-              {submitting ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <>
-                  <Ionicons name="checkmark" size={16} color="#fff" />
-                  <Text style={styles.submitButtonText}>
-                    {stats.userVote ? 'Update Vote' : 'Submit Vote'}
-                  </Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            style={[
+              styles.submitButtonLarge,
+              (!selectedBias || credibilityRating === 0 || qualityRating === 0) && 
+              styles.submitButtonDisabled
+            ]}
+            onPress={handleSubmitVote}
+            disabled={!selectedBias || credibilityRating === 0 || qualityRating === 0 || submitting}
+          >
+            {submitting ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <>
+                <Ionicons name="checkmark" size={20} color="#fff" />
+                <Text style={styles.submitButtonLargeText}>
+                  {stats.userVote ? 'Update My Assessment' : 'Submit My Assessment'}
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
         </View>
       )}
 
-      {/* Login Prompt */}
+      {/* Enhanced Login Prompt */}
       {!user && (
-        <View style={styles.loginPrompt}>
-          <Ionicons name="person-outline" size={24} color="#666" />
-          <Text style={styles.loginPromptText}>
-            Log in to vote and see detailed community assessment
-          </Text>
+        <View style={styles.loginPromptCard}>
+          <View style={styles.loginPromptContent}>
+            <View style={styles.loginIconContainer}>
+              <Ionicons name="person-add-outline" size={32} color="#1DA1F2" />
+            </View>
+            <Text style={styles.loginPromptTitle}>Join the Community</Text>
+            <Text style={styles.loginPromptText}>
+              Sign in to contribute your assessment and help others understand news bias and quality
+            </Text>
+            <View style={styles.loginBenefits}>
+              <View style={styles.benefitItem}>
+                <Ionicons name="checkmark-circle" size={16} color="#10B981" />
+                <Text style={styles.benefitText}>Vote on news bias</Text>
+              </View>
+              <View style={styles.benefitItem}>
+                <Ionicons name="checkmark-circle" size={16} color="#10B981" />
+                <Text style={styles.benefitText}>Rate credibility</Text>
+              </View>
+              <View style={styles.benefitItem}>
+                <Ionicons name="checkmark-circle" size={16} color="#10B981" />
+                <Text style={styles.benefitText}>See detailed insights</Text>
+              </View>
+            </View>
+          </View>
         </View>
       )}
     </View>
@@ -367,49 +528,89 @@ const CommunityVoting: React.FC<Props> = ({ newsStoryId, onVoteUpdate }) => {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     margin: 16,
-    padding: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
     elevation: 3,
   },
   loadingContainer: {
     alignItems: 'center',
-    paddingVertical: 40,
-    gap: 12,
+    paddingVertical: 60,
+    gap: 16,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    margin: 12,
   },
   loadingText: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#666',
+    fontWeight: '500',
   },
   
-  // Header
-  header: {
+  // Clean Header
+  headerCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
   },
-  headerLeft: {
+  headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    flex: 1,
+  },
+  iconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F8FAFC',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  headerInfo: {
+    flex: 1,
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: '600',
+    color: '#1E293B',
+    marginBottom: 4,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  statChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    gap: 4,
   },
   headerSubtitle: {
     fontSize: 12,
-    color: '#666',
+    color: '#6B7280',
+    fontWeight: '600',
+  },
+  participationText: {
+    fontSize: 10,
+    color: '#059669',
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   voteButton: {
-    backgroundColor: '#1DA1F2',
+    backgroundColor: '#0F172A',
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
@@ -418,197 +619,346 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   voteButtonVoted: {
-    backgroundColor: '#10B981',
+    backgroundColor: '#059669',
   },
   voteButtonText: {
     color: '#fff',
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: 'bold',
   },
 
-  // Bias section
-  biasSection: {
-    marginBottom: 24,
+  // Clean Bias Section
+  biasCard: {
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 16,
-  },
-  biasBarContainer: {
-    gap: 12,
-  },
-  biasItem: {
-    gap: 8,
-  },
-  biasHeader: {
+  sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 20,
   },
-  biasLabelContainer: {
+  sectionTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1E293B',
+  },
+  reliabilityBadge: {
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  reliabilityText: {
+    fontSize: 10,
+    fontWeight: '500',
+    color: '#64748B',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  biasVisualization: {
+    gap: 16,
+  },
+  combinedBiasBar: {
+    flexDirection: 'row',
+    height: 8,
+    borderRadius: 4,
+    overflow: 'hidden',
+    backgroundColor: '#F1F5F9',
+  },
+  combinedSegment: {
+    minWidth: 2,
+  },
+  biasItemsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  biasItem: {
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  biasIconContainer: {
+    alignItems: 'center',
+  },
+  biasIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   biasLabel: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#64748B',
+    textAlign: 'center',
   },
   biasPercentage: {
     fontSize: 14,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  biasBar: {
-    height: 6,
-    borderRadius: 3,
-    minWidth: 10,
+    fontWeight: '600',
+    textAlign: 'center',
   },
 
-  // Metrics section
-  metricsSection: {
+  // Clean Metrics Section
+  metricsCard: {
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  metricsHeader: {
     flexDirection: 'row',
-    gap: 16,
+    alignItems: 'center',
+    gap: 8,
     marginBottom: 20,
   },
-  metric: {
-    flex: 1,
-    backgroundColor: '#F8F9FA',
-    padding: 12,
-    borderRadius: 8,
+  metricsTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1E293B',
   },
-  metricHeader: {
+  metricsGrid: {
     flexDirection: 'row',
+    gap: 16,
+  },
+  metricCard: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+    padding: 16,
+    borderRadius: 8,
     alignItems: 'center',
-    gap: 6,
-    marginBottom: 8,
+    gap: 8,
+  },
+  metricIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   metricLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#666',
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#64748B',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
-  metricValue: {
-    alignItems: 'center',
-    gap: 4,
+  metricStarsRow: {
+    marginVertical: 4,
   },
   metricScore: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1E293B',
+  },
+  metricBar: {
+    width: '100%',
+    height: 3,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 2,
+    overflow: 'hidden',
+    marginTop: 8,
+  },
+  metricBarFill: {
+    height: '100%',
+    borderRadius: 2,
   },
 
   // Stars
   starsContainer: {
     flexDirection: 'row',
-    gap: 2,
+    gap: 4,
+    alignItems: 'center',
   },
   interactiveStar: {
     padding: 4,
   },
 
-  // Voting panel
+  // Improved Voting Panel
   votingPanel: {
-    backgroundColor: '#F8F9FA',
-    borderRadius: 12,
-    padding: 16,
-    marginTop: 16,
-    borderWidth: 1,
-    borderColor: '#E1E8ED',
+    backgroundColor: '#FFFFFF',
+    padding: 20,
+    borderTopWidth: 2,
+    borderTopColor: '#E2E8F0',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
   },
-  votingTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 16,
-    textAlign: 'center',
+  votingHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
   },
-  votingSection: {
-    marginBottom: 20,
-  },
-  votingLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
+  votingIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 12,
   },
-  biasOptions: {
+  votingTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1E293B',
+  },
+  closeButton: {
+    padding: 4,
+  },
+  votingStep: {
+    marginBottom: 24,
+  },
+  stepHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 16,
+  },
+  stepNumber: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#0F172A',
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  stepTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1E293B',
+  },
+  simplebiasOptions: {
     flexDirection: 'row',
     gap: 8,
   },
-  biasOption: {
+  simplebiasButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 12,
-    paddingHorizontal: 8,
+    paddingHorizontal: 16,
     borderRadius: 8,
+    backgroundColor: '#F8FAFC',
     borderWidth: 2,
-    backgroundColor: '#fff',
+    borderColor: '#E2E8F0',
     gap: 6,
   },
-  biasOptionSelected: {
-    backgroundColor: '#1DA1F2',
-    borderColor: '#1DA1F2',
+  simplebiasButtonSelected: {
+    backgroundColor: '#0F172A',
+    borderColor: '#0F172A',
   },
-  biasOptionText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#666',
-  },
-  biasOptionTextSelected: {
-    color: '#fff',
-  },
-  votingActions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  cancelButton: {
-    flex: 1,
-    paddingVertical: 12,
-    alignItems: 'center',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E1E8ED',
-    backgroundColor: '#fff',
-  },
-  cancelButtonText: {
-    color: '#666',
+  simplebiasText: {
     fontSize: 14,
     fontWeight: '600',
+    color: '#64748B',
   },
-  submitButton: {
-    flex: 2,
+  simplebiasTextSelected: {
+    color: '#FFFFFF',
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  ratingLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#64748B',
+    minWidth: 35,
+  },
+  starsRow: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  starButton: {
+    padding: 2,
+  },
+  ratingFeedback: {
+    textAlign: 'center',
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#059669',
+    marginTop: 4,
+  },
+  submitButtonLarge: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    borderRadius: 8,
-    backgroundColor: '#1DA1F2',
-    gap: 6,
+    paddingVertical: 16,
+    borderRadius: 12,
+    backgroundColor: '#0F172A',
+    gap: 8,
+    marginTop: 8,
   },
   submitButtonDisabled: {
-    backgroundColor: '#CBD5E0',
+    backgroundColor: '#CBD5E1',
   },
-  submitButtonText: {
+  submitButtonLargeText: {
     color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 
-  // Login prompt
-  loginPrompt: {
+  // Clean Login Prompt
+  loginPromptCard: {
+    padding: 24,
     alignItems: 'center',
-    paddingVertical: 20,
-    gap: 8,
+    backgroundColor: '#F8FAFC',
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  loginPromptContent: {
+    alignItems: 'center',
+  },
+  loginIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  loginPromptTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1E293B',
+    marginBottom: 8,
+    textAlign: 'center',
   },
   loginPromptText: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 13,
+    color: '#64748B',
     textAlign: 'center',
+    lineHeight: 18,
+    marginBottom: 16,
+  },
+  loginBenefits: {
+    gap: 8,
+    alignSelf: 'stretch',
+  },
+  benefitItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  benefitText: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '400',
   },
 });
 

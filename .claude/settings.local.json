@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__ide__getDiagnostics",
+      "Bash(npx expo build:web:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
