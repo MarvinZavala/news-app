@@ -7,13 +7,14 @@ import {
   Alert,
   ActivityIndicator,
   Animated,
-  Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { votingService } from '../services/VotingService';
 import { useAuth } from '../context/AuthContext';
+import Card from './ui/Card';
+import ActionButton from './ui/ActionButton';
+// import AnimatedCard from './ui/AnimatedCard';
 
-const { width: screenWidth } = Dimensions.get('window');
 
 interface Props {
   newsStoryId: string;
@@ -163,84 +164,74 @@ const CommunityVoting: React.FC<Props> = ({ newsStoryId, onVoteUpdate }) => {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <Card style={styles.container} padding="medium" shadow={true}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#1DA1F2" />
-          <Text style={styles.loadingText}>Loading community votes...</Text>
+          <ActivityIndicator size="small" color="#6B7280" />
+          <Text style={styles.loadingText}>Loading votes...</Text>
         </View>
-      </View>
+      </Card>
     );
   }
 
   return (
-    <View style={styles.container}>
-      {/* Clean Header */}
-      <View style={styles.headerCard}>
-        <View style={styles.headerContent}>
+    <Card style={styles.container} padding="medium" shadow={true}>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
           <View style={styles.iconContainer}>
-            <Ionicons name="people" size={24} color="#64748B" />
+            <Ionicons name="people" size={20} color="#8B5CF6" />
           </View>
-          <View style={styles.headerInfo}>
-            <Text style={styles.headerTitle}>Community Assessment</Text>
-            <View style={styles.statsRow}>
-              <View style={styles.statChip}>
-                <Text style={styles.headerSubtitle}>
-                  {stats.totalVotes} {stats.totalVotes === 1 ? 'vote' : 'votes'}
-                </Text>
-              </View>
-            </View>
+          <View>
+            <Text style={styles.title}>Community Assessment</Text>
+            <Text style={styles.subtitle}>
+              {stats.totalVotes} {stats.totalVotes === 1 ? 'vote' : 'votes'}
+            </Text>
           </View>
         </View>
         
         {user && (
-          <TouchableOpacity
-            style={[
-              styles.voteButton,
-              stats.userVote && styles.voteButtonVoted
-            ]}
+          <ActionButton
+            text={showVotingPanel ? 'Close' : stats.userVote ? 'Edit' : 'Vote'}
             onPress={() => setShowVotingPanel(!showVotingPanel)}
-          >
-            <Text style={styles.voteButtonText}>
-              {showVotingPanel ? 'Close' : stats.userVote ? 'Edit Vote' : 'Vote Now'}
-            </Text>
-          </TouchableOpacity>
+            variant={stats.userVote ? 'secondary' : 'primary'}
+            size="small"
+          />
         )}
       </View>
 
-      {/* Voting Panel - Right after header */}
+      {/* Compact Voting Panel */}
       {showVotingPanel && user && (
         <View style={styles.votingPanel}>
-          <View style={styles.votingContent}>
-            <Text style={styles.votingTitle}>Rate This Story</Text>
-            
-            {/* Political Bias */}
-            <View style={styles.questionGroup}>
-              <Text style={styles.questionLabel}>Political lean:</Text>
-              <View style={styles.optionRow}>
-                {(['left', 'center', 'right'] as const).map((bias) => (
-                  <TouchableOpacity
-                    key={bias}
-                    style={[
-                      styles.optionButton,
-                      selectedBias === bias && styles.optionButtonSelected
-                    ]}
-                    onPress={() => setSelectedBias(bias)}
-                  >
-                    <Text style={[
-                      styles.optionText,
-                      selectedBias === bias && styles.optionTextSelected
-                    ]}>
-                      {bias.charAt(0).toUpperCase() + bias.slice(1)}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+          {/* Bias Selection */}
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>Political Lean</Text>
+            <View style={styles.biasOptions}>
+              {(['left', 'center', 'right'] as const).map((bias) => (
+                <TouchableOpacity
+                  key={bias}
+                  style={[
+                    styles.biasChip,
+                    selectedBias === bias && styles.biasChipSelected,
+                    { backgroundColor: selectedBias === bias ? getBiasColor(bias) : '#F3F4F6' }
+                  ]}
+                  onPress={() => setSelectedBias(bias)}
+                >
+                  <Text style={[
+                    styles.biasChipText,
+                    selectedBias === bias && styles.biasChipTextSelected
+                  ]}>
+                    {bias.charAt(0).toUpperCase() + bias.slice(1)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
             </View>
+          </View>
 
-            {/* Credibility */}
-            <View style={styles.questionGroup}>
-              <Text style={styles.questionLabel}>Credibility:</Text>
-              <View style={styles.starsContainer}>
+          {/* Rating Section */}
+          <View style={styles.ratingsRow}>
+            <View style={styles.ratingGroup}>
+              <Text style={styles.ratingLabel}>Credibility</Text>
+              <View style={styles.starsRow}>
                 {[1, 2, 3, 4, 5].map((star) => (
                   <TouchableOpacity
                     key={star}
@@ -249,18 +240,17 @@ const CommunityVoting: React.FC<Props> = ({ newsStoryId, onVoteUpdate }) => {
                   >
                     <Ionicons
                       name={star <= credibilityRating ? "star" : "star-outline"}
-                      size={28}
-                      color={star <= credibilityRating ? "#FFD700" : "#E2E8F0"}
+                      size={20}
+                      color={star <= credibilityRating ? "#F59E0B" : "#E5E7EB"}
                     />
                   </TouchableOpacity>
                 ))}
               </View>
             </View>
 
-            {/* Quality */}
-            <View style={styles.questionGroup}>
-              <Text style={styles.questionLabel}>Overall quality:</Text>
-              <View style={styles.starsContainer}>
+            <View style={styles.ratingGroup}>
+              <Text style={styles.ratingLabel}>Quality</Text>
+              <View style={styles.starsRow}>
                 {[1, 2, 3, 4, 5].map((star) => (
                   <TouchableOpacity
                     key={star}
@@ -269,44 +259,36 @@ const CommunityVoting: React.FC<Props> = ({ newsStoryId, onVoteUpdate }) => {
                   >
                     <Ionicons
                       name={star <= qualityRating ? "star" : "star-outline"}
-                      size={28}
-                      color={star <= qualityRating ? "#FFD700" : "#E2E8F0"}
+                      size={20}
+                      color={star <= qualityRating ? "#F59E0B" : "#E5E7EB"}
                     />
                   </TouchableOpacity>
                 ))}
               </View>
             </View>
-
-            {/* Submit Button */}
-            <TouchableOpacity
-              style={[
-                styles.submitButton,
-                (!selectedBias || credibilityRating === 0 || qualityRating === 0 || submitting) && 
-                styles.submitButtonDisabled
-              ]}
-              onPress={handleSubmitVote}
-              disabled={!selectedBias || credibilityRating === 0 || qualityRating === 0 || submitting}
-            >
-              {submitting ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Text style={styles.submitButtonText}>
-                  {stats.userVote ? 'Update Vote' : 'Submit Vote'}
-                </Text>
-              )}
-            </TouchableOpacity>
           </View>
+
+          {/* Submit */}
+          <ActionButton
+            text={stats.userVote ? 'Update Vote' : 'Submit Vote'}
+            onPress={handleSubmitVote}
+            loading={submitting}
+            disabled={!selectedBias || credibilityRating === 0 || qualityRating === 0}
+            variant="primary"
+            size="medium"
+            style={styles.submitButton}
+          />
         </View>
       )}
       
-      {/* Bias Distribution - Only show if no voting panel */}
+      {/* Results - Only show if no voting panel */}
       {!showVotingPanel && (
-        <View style={styles.biasCard}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Community Results</Text>
+        <View style={styles.resultsSection}>
+          <View style={styles.resultsHeader}>
+            <Text style={styles.resultsTitle}>Results</Text>
             {stats.totalVotes > 0 && (
-              <View style={styles.reliabilityBadge}>
-                <Text style={styles.reliabilityText}>
+              <View style={styles.confidenceBadge}>
+                <Text style={styles.confidenceText}>
                   {stats.totalVotes > 10 ? 'High' : stats.totalVotes > 5 ? 'Medium' : 'Low'} confidence
                 </Text>
               </View>
@@ -395,421 +377,198 @@ const CommunityVoting: React.FC<Props> = ({ newsStoryId, onVoteUpdate }) => {
       )}
 
 
-      {/* Enhanced Login Prompt */}
+      {/* Login Prompt */}
       {!user && (
-        <View style={styles.loginPromptCard}>
-          <View style={styles.loginPromptContent}>
-            <View style={styles.loginIconContainer}>
-              <Ionicons name="person-add-outline" size={32} color="#1DA1F2" />
-            </View>
-            <Text style={styles.loginPromptTitle}>Join the Community</Text>
-            <Text style={styles.loginPromptText}>
-              Sign in to contribute your assessment and help others understand news bias and quality
-            </Text>
-            <View style={styles.loginBenefits}>
-              <View style={styles.benefitItem}>
-                <Ionicons name="checkmark-circle" size={16} color="#10B981" />
-                <Text style={styles.benefitText}>Vote on news bias</Text>
-              </View>
-              <View style={styles.benefitItem}>
-                <Ionicons name="checkmark-circle" size={16} color="#10B981" />
-                <Text style={styles.benefitText}>Rate credibility</Text>
-              </View>
-              <View style={styles.benefitItem}>
-                <Ionicons name="checkmark-circle" size={16} color="#10B981" />
-                <Text style={styles.benefitText}>See detailed insights</Text>
-              </View>
-            </View>
-          </View>
+        <View style={styles.loginPrompt}>
+          <Text style={styles.loginText}>Sign in to vote and contribute</Text>
         </View>
       )}
-    </View>
+    </Card>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
     margin: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    marginTop: 8,
+    marginBottom: 12,
   },
   loadingContainer: {
     alignItems: 'center',
-    paddingVertical: 60,
-    gap: 16,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    margin: 12,
+    paddingVertical: 40,
+    gap: 12,
   },
   loadingText: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: 14,
+    color: '#6B7280',
     fontWeight: '500',
   },
-  
-  // Clean Header
-  headerCard: {
+  // Header
+  header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    justifyContent: 'space-between',
+    marginBottom: 16,
   },
-  headerContent: {
+  headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
   },
   iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F8FAFC',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F3E8FF',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
   },
-  headerInfo: {
-    flex: 1,
-  },
-  headerTitle: {
-    fontSize: 18,
+  title: {
+    fontSize: 16,
     fontWeight: '600',
-    color: '#1E293B',
-    marginBottom: 4,
+    color: '#1F2937',
+    marginBottom: 2,
   },
-  statsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  statChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
-    gap: 4,
-  },
-  headerSubtitle: {
+  subtitle: {
     fontSize: 12,
     color: '#6B7280',
-    fontWeight: '600',
+    fontWeight: '500',
   },
-  participationText: {
-    fontSize: 10,
-    color: '#059669',
-    fontWeight: 'bold',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+  // Results Section
+  resultsSection: {
+    paddingTop: 16,
   },
-  voteButton: {
-    backgroundColor: '#0F172A',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 6,
-  },
-  voteButtonVoted: {
-    backgroundColor: '#059669',
-  },
-  voteButtonText: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-
-  // Clean Bias Section
-  biasCard: {
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-  },
-  sectionHeader: {
+  resultsHeader: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  sectionTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1E293B',
-  },
-  reliabilityBadge: {
-    backgroundColor: '#F8FAFC',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  reliabilityText: {
-    fontSize: 10,
-    fontWeight: '500',
-    color: '#64748B',
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
-  },
-  biasVisualization: {
-    gap: 16,
-  },
-  combinedBiasBar: {
-    flexDirection: 'row',
-    height: 8,
-    borderRadius: 4,
-    overflow: 'hidden',
-    backgroundColor: '#F1F5F9',
-  },
-  combinedSegment: {
-    minWidth: 2,
-  },
-  biasItemsGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  biasItem: {
-    alignItems: 'center',
-    gap: 8,
-    flex: 1,
-  },
-  biasIconContainer: {
-    alignItems: 'center',
-  },
-  biasIconCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  biasLabel: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#64748B',
-    textAlign: 'center',
-  },
-  biasPercentage: {
-    fontSize: 14,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-
-  // Clean Metrics Section
-  metricsCard: {
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-  },
-  metricsHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 20,
-  },
-  metricsTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1E293B',
-  },
-  metricsGrid: {
-    flexDirection: 'row',
-    gap: 16,
-  },
-  metricCard: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
-    padding: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    gap: 8,
-  },
-  metricIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  metricLabel: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: '#64748B',
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
-  },
-  metricStarsRow: {
-    marginVertical: 4,
-  },
-  metricScore: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1E293B',
-  },
-  metricBar: {
-    width: '100%',
-    height: 3,
-    backgroundColor: '#F1F5F9',
-    borderRadius: 2,
-    overflow: 'hidden',
-    marginTop: 8,
-  },
-  metricBarFill: {
-    height: '100%',
-    borderRadius: 2,
-  },
-
-  // Stars
-  starsContainer: {
-    flexDirection: 'row',
-    gap: 4,
-    alignItems: 'center',
-  },
-  interactiveStar: {
-    padding: 4,
-  },
-
-  // Clean Voting Panel
-  votingPanel: {
-    backgroundColor: '#F8FAFC',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-  },
-  votingContent: {
-    padding: 20,
-  },
-  votingIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
     marginBottom: 12,
   },
-  votingTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1E293B',
-    marginBottom: 20,
-  },
-  questionGroup: {
-    marginBottom: 20,
-  },
-  questionLabel: {
+  resultsTitle: {
     fontSize: 14,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  confidenceBadge: {
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  confidenceText: {
+    fontSize: 10,
+    fontWeight: '500',
+    color: '#6B7280',
+    textTransform: 'uppercase',
+  },
+  biasBar: {
+    flexDirection: 'row',
+    height: 6,
+    borderRadius: 3,
+    overflow: 'hidden',
+    backgroundColor: '#F3F4F6',
+    marginBottom: 12,
+  },
+  biasSegment: {
+    minWidth: 1,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+  },
+  statItem: {
+    alignItems: 'center',
+    minWidth: 50,
+  },
+  statLabel: {
+    fontSize: 10,
+    color: '#9CA3AF',
+    fontWeight: '500',
+    marginBottom: 2,
+  },
+  statValue: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  // Voting Panel
+  votingPanel: {
+    backgroundColor: '#F9FAFB',
+    padding: 16,
+    marginTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  section: {
+    marginBottom: 16,
+  },
+  sectionLabel: {
+    fontSize: 13,
     fontWeight: '600',
     color: '#374151',
-    marginBottom: 12,
+    marginBottom: 8,
   },
-  optionRow: {
+  biasOptions: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 6,
   },
-  optionButton: {
+  biasChip: {
     flex: 1,
-    paddingVertical: 10,
+    paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 6,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
     alignItems: 'center',
   },
-  optionButtonSelected: {
-    backgroundColor: '#0F172A',
-    borderColor: '#0F172A',
+  biasChipSelected: {
+    // backgroundColor set dynamically
   },
-  optionText: {
-    fontSize: 13,
+  biasChipText: {
+    fontSize: 12,
     fontWeight: '500',
-    color: '#64748B',
+    color: '#6B7280',
   },
-  optionTextSelected: {
+  biasChipTextSelected: {
     color: '#FFFFFF',
     fontWeight: '600',
   },
-  starsContainer: {
+  ratingsRow: {
     flexDirection: 'row',
-    gap: 8,
-    justifyContent: 'center',
+    gap: 16,
+    marginBottom: 16,
+  },
+  ratingGroup: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  ratingLabel: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#6B7280',
+    marginBottom: 6,
+  },
+  starsRow: {
+    flexDirection: 'row',
+    gap: 2,
   },
   starButton: {
-    padding: 4,
+    padding: 2,
   },
   submitButton: {
-    backgroundColor: '#0F172A',
-    paddingVertical: 14,
-    borderRadius: 8,
-    alignItems: 'center',
     marginTop: 8,
   },
-  submitButtonDisabled: {
-    backgroundColor: '#CBD5E1',
-  },
-  submitButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-
-  // Clean Login Prompt
-  loginPromptCard: {
-    padding: 24,
+  // Login Prompt
+  loginPrompt: {
+    paddingTop: 16,
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
     borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
+    borderTopColor: '#E5E7EB',
   },
-  loginPromptContent: {
-    alignItems: 'center',
-  },
-  loginIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  loginPromptTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1E293B',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  loginPromptText: {
+  loginText: {
     fontSize: 13,
-    color: '#64748B',
-    textAlign: 'center',
-    lineHeight: 18,
-    marginBottom: 16,
-  },
-  loginBenefits: {
-    gap: 8,
-    alignSelf: 'stretch',
-  },
-  benefitItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  benefitText: {
-    fontSize: 12,
-    color: '#64748B',
-    fontWeight: '400',
+    color: '#6B7280',
+    fontStyle: 'italic',
   },
 });
 
