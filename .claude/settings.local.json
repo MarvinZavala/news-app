@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "mcp__ide__getDiagnostics",
-      "Bash(npx expo build:web:*)"
+      "Bash(npx expo build:web:*)",
+      "Bash(npm install:*)",
+      "Bash(npx expo install expo-av expo-image-picker)",
+      "Bash(npx expo:*)"
     ],
     "deny": [],
     "ask": []

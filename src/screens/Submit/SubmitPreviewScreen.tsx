@@ -8,7 +8,10 @@ import {
   Alert,
   ActivityIndicator,
   Linking,
+  Image,
+  Dimensions,
 } from 'react-native';
+import { Video } from 'expo-av';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -16,6 +19,8 @@ import { RouteProp } from '@react-navigation/native';
 import { SubmitStackParamList } from '../../types/navigation';
 import { useAuth } from '../../context/AuthContext';
 import { newsService } from '../../services/NewsService';
+
+const { width: screenWidth } = Dimensions.get('window');
 
 type Props = {
   navigation: StackNavigationProp<SubmitStackParamList, 'SubmitPreview'>;
@@ -51,6 +56,9 @@ const SubmitPreviewScreen: React.FC<Props> = ({ navigation, route }) => {
         suggestedBias: newsData.suggestedBias,
         suggestedCredibility: newsData.suggestedCredibility,
         sourceReputation: newsData.sourceReputation,
+        photos: newsData.photos,
+        videos: newsData.videos,
+        selectedCoverImageId: newsData.selectedCoverImageId,
       });
 
       console.log('✅ News submitted successfully:', submissionId);
@@ -76,7 +84,9 @@ const SubmitPreviewScreen: React.FC<Props> = ({ navigation, route }) => {
   };
 
   const handleOpenUrl = () => {
-    Linking.openURL(newsData.primaryUrl);
+    if (newsData.primaryUrl) {
+      Linking.openURL(newsData.primaryUrl);
+    }
   };
 
   const getCategoryColor = (category: string): string => {
@@ -146,14 +156,68 @@ const SubmitPreviewScreen: React.FC<Props> = ({ navigation, route }) => {
               {newsData.summary}
             </Text>
 
-            {/* URL Preview */}
-            <TouchableOpacity style={styles.urlPreview} onPress={handleOpenUrl}>
-              <Ionicons name="link-outline" size={16} color="#1DA1F2" />
-              <Text style={styles.urlText} numberOfLines={1}>
-                {newsData.primaryUrl}
-              </Text>
-              <Ionicons name="open-outline" size={14} color="#666" />
-            </TouchableOpacity>
+            {/* Media Preview */}
+            {(newsData.photos.length > 0 || newsData.videos.length > 0) && (
+              <View style={styles.mediaPreview}>
+                {/* Cover Photo */}
+                {newsData.selectedCoverImageId && newsData.photos.length > 0 && (
+                  <View style={styles.coverImageContainer}>
+                    {(() => {
+                      const coverPhoto = newsData.photos.find(p => p.id === newsData.selectedCoverImageId);
+                      return coverPhoto ? (
+                        <Image source={{ uri: coverPhoto.uri }} style={styles.coverImage} resizeMode="cover" />
+                      ) : (
+                        <Image source={{ uri: newsData.photos[0].uri }} style={styles.coverImage} resizeMode="cover" />
+                      );
+                    })()}
+                    
+                    {/* Media Count Badge */}
+                    {(newsData.photos.length + newsData.videos.length) > 1 && (
+                      <View style={styles.mediaCountBadge}>
+                        <Ionicons name="images" size={12} color="#fff" />
+                        <Text style={styles.mediaCountText}>
+                          +{newsData.photos.length + newsData.videos.length - 1}
+                        </Text>
+                      </View>
+                    )}
+                    
+                    {/* Video Indicator */}
+                    {newsData.videos.length > 0 && (
+                      <View style={styles.videoIndicator}>
+                        <Ionicons name="play-circle" size={24} color="#fff" />
+                      </View>
+                    )}
+                  </View>
+                )}
+                
+                {/* If no photos but has videos, show video preview */}
+                {newsData.photos.length === 0 && newsData.videos.length > 0 && (
+                  <View style={styles.videoPreviewContainer}>
+                    <Video
+                      source={{ uri: newsData.videos[0].uri }}
+                      style={styles.videoPreview}
+                      resizeMode="cover"
+                      shouldPlay={false}
+                      useNativeControls={false}
+                    />
+                    <View style={styles.videoIndicator}>
+                      <Ionicons name="play-circle" size={24} color="#fff" />
+                    </View>
+                  </View>
+                )}
+              </View>
+            )}
+
+            {/* URL Preview - Only show if URL exists */}
+            {newsData.primaryUrl && (
+              <TouchableOpacity style={styles.urlPreview} onPress={handleOpenUrl}>
+                <Ionicons name="link-outline" size={16} color="#1DA1F2" />
+                <Text style={styles.urlText} numberOfLines={1}>
+                  {newsData.primaryUrl}
+                </Text>
+                <Ionicons name="open-outline" size={14} color="#666" />
+              </TouchableOpacity>
+            )}
 
             {/* Engagement Placeholder */}
             <View style={styles.cardEngagement}>
@@ -196,14 +260,28 @@ const SubmitPreviewScreen: React.FC<Props> = ({ navigation, route }) => {
             <Text style={styles.detailValue}>{newsData.category}</Text>
           </View>
 
-          <View style={styles.detailItem}>
-            <Text style={styles.detailLabel}>URL:</Text>
-            <TouchableOpacity onPress={handleOpenUrl}>
-              <Text style={styles.detailLink} numberOfLines={2}>
-                {newsData.url}
+          {newsData.primaryUrl && (
+            <View style={styles.detailItem}>
+              <Text style={styles.detailLabel}>Primary URL:</Text>
+              <TouchableOpacity onPress={handleOpenUrl}>
+                <Text style={styles.detailLink} numberOfLines={2}>
+                  {newsData.primaryUrl}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Media Details */}
+          {(newsData.photos.length > 0 || newsData.videos.length > 0) && (
+            <View style={styles.detailItem}>
+              <Text style={styles.detailLabel}>Media:</Text>
+              <Text style={styles.detailValue}>
+                {newsData.photos.length} photo{newsData.photos.length !== 1 ? 's' : ''}
+                {newsData.photos.length > 0 && newsData.videos.length > 0 ? ', ' : ''}
+                {newsData.videos.length > 0 && `${newsData.videos.length} video${newsData.videos.length !== 1 ? 's' : ''}`}
               </Text>
-            </TouchableOpacity>
-          </View>
+            </View>
+          )}
 
           <View style={styles.detailItem}>
             <Text style={styles.detailLabel}>Summary:</Text>
@@ -426,6 +504,59 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 6,
     backgroundColor: '#F8F9FA',
+  },
+  
+  // Media Preview styles
+  mediaPreview: {
+    marginBottom: 16,
+  },
+  coverImageContainer: {
+    position: 'relative',
+    width: '100%',
+    height: 200,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  coverImage: {
+    width: '100%',
+    height: '100%',
+  },
+  videoPreviewContainer: {
+    position: 'relative',
+    width: '100%',
+    height: 200,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  videoPreview: {
+    width: '100%',
+    height: '100%',
+  },
+  mediaCountBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  mediaCountText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  videoIndicator: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: [{ translateX: -12 }, { translateY: -12 }],
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 12,
+    padding: 4,
   },
   
   // Details section

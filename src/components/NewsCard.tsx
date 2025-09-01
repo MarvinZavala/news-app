@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Dimensions,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { NewsStory } from '../types/news';
@@ -153,6 +154,30 @@ const NewsCard: React.FC<Props> = ({ story, onPress, onBookmark, onShare }) => {
         <Text style={styles.timeAgo}>{formatTimeAgo(story.createdAt)}</Text>
       </View>
 
+      {/* Cover Image */}
+      {story.media?.coverImageUrl && (
+        <View style={styles.coverImageContainer}>
+          <Image 
+            source={{ uri: story.media.coverImageUrl }} 
+            style={styles.coverImage}
+            resizeMode="cover"
+          />
+          {/* Media Count Badge */}
+          {story.media.totalMediaCount > 1 && (
+            <View style={styles.mediaCountBadge}>
+              <Ionicons name="images" size={12} color="#fff" />
+              <Text style={styles.mediaCountText}>+{story.media.totalMediaCount - 1}</Text>
+            </View>
+          )}
+          {/* Video indicator */}
+          {story.media.videos.length > 0 && (
+            <View style={styles.videoIndicator}>
+              <Ionicons name="play-circle" size={24} color="#fff" />
+            </View>
+          )}
+        </View>
+      )}
+
       {/* Title and Summary */}
       <Text style={styles.title} numberOfLines={2}>
         {story.title}
@@ -189,75 +214,77 @@ const NewsCard: React.FC<Props> = ({ story, onPress, onBookmark, onShare }) => {
         </View>
       )}
 
-      {/* Bias Visualization */}
-      <View style={styles.biasSection}>
-        <View style={styles.biasHeader}>
-          <Text style={styles.biasTitle}>Political Coverage</Text>
-          <View style={styles.sourceCount}>
-            <Ionicons name="newspaper-outline" size={12} color="#666" />
-            <Text style={styles.sourceCountText}>
-              {story.totalSources} {story.totalSources === 1 ? 'source' : 'sources'}
-              {story.totalSources > 1 && ' ✓'}
-            </Text>
+      {/* Bias Visualization - Only show if biasScore exists */}
+      {story.biasScore && (
+        <View style={styles.biasSection}>
+          <View style={styles.biasHeader}>
+            <Text style={styles.biasTitle}>Political Coverage</Text>
+            <View style={styles.sourceCount}>
+              <Ionicons name="newspaper-outline" size={12} color="#666" />
+              <Text style={styles.sourceCountText}>
+                {story.totalSources} {story.totalSources === 1 ? 'source' : 'sources'}
+                {story.totalSources > 1 && ' ✓'}
+              </Text>
+            </View>
+          </View>
+          
+          <View style={styles.biasBar}>
+            {/* Left bias */}
+            <View style={styles.biasSegmentContainer}>
+              <View 
+                style={[
+                  styles.biasSegment, 
+                  { 
+                    backgroundColor: getBiasColor('left'),
+                    width: getBiasBarWidth(story.biasScore.left || 0)
+                  }
+                ]} 
+              />
+              <Text style={styles.biasLabel}>Left</Text>
+              <Text style={styles.biasPercentage}>{story.biasScore.left || 0}%</Text>
+            </View>
+
+            {/* Center bias */}
+            <View style={styles.biasSegmentContainer}>
+              <View 
+                style={[
+                  styles.biasSegment, 
+                  { 
+                    backgroundColor: getBiasColor('center'),
+                    width: getBiasBarWidth(story.biasScore.center || 0)
+                  }
+                ]} 
+              />
+              <Text style={styles.biasLabel}>Center</Text>
+              <Text style={styles.biasPercentage}>{story.biasScore.center || 0}%</Text>
+            </View>
+
+            {/* Right bias */}
+            <View style={styles.biasSegmentContainer}>
+              <View 
+                style={[
+                  styles.biasSegment, 
+                  { 
+                    backgroundColor: getBiasColor('right'),
+                    width: getBiasBarWidth(story.biasScore.right || 0)
+                  }
+                ]} 
+              />
+              <Text style={styles.biasLabel}>Right</Text>
+              <Text style={styles.biasPercentage}>{story.biasScore.right || 0}%</Text>
+            </View>
           </View>
         </View>
-        
-        <View style={styles.biasBar}>
-          {/* Left bias */}
-          <View style={styles.biasSegmentContainer}>
-            <View 
-              style={[
-                styles.biasSegment, 
-                { 
-                  backgroundColor: getBiasColor('left'),
-                  width: getBiasBarWidth(story.biasScore.left)
-                }
-              ]} 
-            />
-            <Text style={styles.biasLabel}>Left</Text>
-            <Text style={styles.biasPercentage}>{story.biasScore.left}%</Text>
-          </View>
-
-          {/* Center bias */}
-          <View style={styles.biasSegmentContainer}>
-            <View 
-              style={[
-                styles.biasSegment, 
-                { 
-                  backgroundColor: getBiasColor('center'),
-                  width: getBiasBarWidth(story.biasScore.center)
-                }
-              ]} 
-            />
-            <Text style={styles.biasLabel}>Center</Text>
-            <Text style={styles.biasPercentage}>{story.biasScore.center}%</Text>
-          </View>
-
-          {/* Right bias */}
-          <View style={styles.biasSegmentContainer}>
-            <View 
-              style={[
-                styles.biasSegment, 
-                { 
-                  backgroundColor: getBiasColor('right'),
-                  width: getBiasBarWidth(story.biasScore.right)
-                }
-              ]} 
-            />
-            <Text style={styles.biasLabel}>Right</Text>
-            <Text style={styles.biasPercentage}>{story.biasScore.right}%</Text>
-          </View>
-        </View>
-      </View>
+      )}
 
       {/* Engagement section */}
       <View style={styles.engagementSection}>
         <View style={styles.credibilityContainer}>
           <View style={styles.stars}>
-            {getCredibilityStars(story.averageCredibility)}
+            {getCredibilityStars(story.averageCredibility || 0)}
           </View>
           <Text style={styles.credibilityScore}>
-            {story.averageCredibility.toFixed(1)}
+            {(story.averageCredibility || 0).toFixed(1)}
           </Text>
         </View>
 
@@ -423,6 +450,46 @@ const styles = StyleSheet.create({
   timeAgo: {
     fontSize: 11,
     color: '#999',
+  },
+
+  // Cover Image styles
+  coverImageContainer: {
+    position: 'relative',
+    width: '100%',
+    height: 200,
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginBottom: 12,
+  },
+  coverImage: {
+    width: '100%',
+    height: '100%',
+  },
+  mediaCountBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  mediaCountText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  videoIndicator: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: [{ translateX: -12 }, { translateY: -12 }],
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 12,
+    padding: 4,
   },
 
   // Content styles

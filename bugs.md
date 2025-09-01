@@ -8,4 +8,4 @@ rm -rf node_modules package-lock.json
 npm install
 
 # 4. Iniciar el servidor limpiando el caché de Metro
-npm run web -- --clear
+npm run web -- --clearm nb vb

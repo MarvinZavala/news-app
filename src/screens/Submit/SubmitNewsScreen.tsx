@@ -10,12 +10,17 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Image,
+  Dimensions,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { Video } from 'expo-av';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { SubmitStackParamList, UserNewsSubmissionForm } from '../../types/navigation';
+import { SubmitStackParamList, UserNewsSubmissionForm, FormMediaFile } from '../../types/navigation';
 import { useAuth } from '../../context/AuthContext';
+import { mediaService } from '../../services/MediaService';
 
 type Props = {
   navigation: StackNavigationProp<SubmitStackParamList, 'SubmitNewsScreen'>;
@@ -56,6 +61,8 @@ const SOURCE_REPUTATION = [
   { key: 'unknown', label: '❓ Unknown Source', description: 'Not in our database' },
 ];
 
+const { width: screenWidth } = Dimensions.get('window');
+
 const SubmitNewsScreen: React.FC<Props> = ({ navigation }) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -69,6 +76,9 @@ const SubmitNewsScreen: React.FC<Props> = ({ navigation }) => {
     urgencyLevel: 'normal',
     sourceReputation: 'unknown',
     hasMultipleSources: false,
+    photos: [],
+    videos: [],
+    selectedCoverImageId: undefined,
   });
   
   const [newTag, setNewTag] = useState('');
@@ -89,6 +99,194 @@ const SubmitNewsScreen: React.FC<Props> = ({ navigation }) => {
     }
   };
 
+  // Media picker permissions
+  const ensureLibraryPermission = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert(
+        'Permission Required',
+        'Media library permission is needed to pick photos or videos from your gallery.'
+      );
+      return false;
+    }
+    return true;
+  };
+
+  const ensureCameraPermission = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert(
+        'Permission Required',
+        'Camera permission is needed to take photos or record videos.'
+      );
+      return false;
+    }
+    return true;
+  };
+
+  const pickPhotos = async () => {
+    const hasLibrary = await ensureLibraryPermission();
+    if (!hasLibrary) return;
+
+    const currentPhotoCount = formData.photos.length;
+    const remainingSlots = mediaService.getFileSizeLimits().maxPhotos - currentPhotoCount;
+    
+    if (remainingSlots <= 0) {
+      Alert.alert('Limit Reached', `Maximum ${mediaService.getFileSizeLimits().maxPhotos} photos allowed`);
+      return;
+    }
+
+    Alert.alert(
+      'Select Photos',
+      'Choose how you want to add photos',
+      [
+        { text: 'Camera', onPress: async () => { if (await ensureCameraPermission()) { takePicture(); } } },
+        { text: 'Photo Library', onPress: () => pickFromLibrary('photo') },
+        { text: 'Cancel', style: 'cancel' }
+      ]
+    );
+  };
+
+  const pickVideo = async () => {
+    const hasLibrary = await ensureLibraryPermission();
+    if (!hasLibrary) return;
+
+    if (formData.videos.length >= 1) {
+      Alert.alert('Limit Reached', 'Maximum 1 video allowed');
+      return;
+    }
+
+    Alert.alert(
+      'Select Video',
+      'Choose how you want to add a video',
+      [
+        { text: 'Record Video', onPress: async () => { if (await ensureCameraPermission()) { recordVideo(); } } },
+        { text: 'Video Library', onPress: () => pickFromLibrary('video') },
+        { text: 'Cancel', style: 'cancel' }
+      ]
+    );
+  };
+
+  const takePicture = async () => {
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      addMediaFile(result.assets[0], 'photo');
+    }
+  };
+
+  const recordVideo = async () => {
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+      allowsEditing: true,
+      videoMaxDuration: 180, // 3 minutes
+      // quality is a number between 0 and 1 in expo-image-picker
+      quality: 0.6,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      addMediaFile(result.assets[0], 'video');
+    }
+  };
+
+  const pickFromLibrary = async (type: 'photo' | 'video') => {
+    const mediaTypeOptions = type === 'photo' 
+      ? ImagePicker.MediaTypeOptions.Images 
+      : ImagePicker.MediaTypeOptions.Videos;
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: mediaTypeOptions,
+      allowsMultipleSelection: type === 'photo',
+      allowsEditing: type === 'video',
+      aspect: [16, 9],
+      quality: 0.8,
+      videoMaxDuration: 180, // 3 minutes
+    });
+
+    if (!result.canceled) {
+      // Respect remaining photo slots when adding multiple
+      const limits = mediaService.getFileSizeLimits();
+      const currentCount = type === 'photo' ? formData.photos.length : formData.videos.length;
+      const maxCount = type === 'photo' ? limits.maxPhotos : 1;
+      const remaining = Math.max(0, maxCount - currentCount);
+      const assetsToAdd = type === 'photo' ? result.assets.slice(0, remaining) : result.assets.slice(0, 1);
+
+      assetsToAdd.forEach(asset => {
+        addMediaFile(asset, type);
+      });
+    }
+  };
+
+  const addMediaFile = (asset: ImagePicker.ImagePickerAsset, type: 'photo' | 'video') => {
+    const fileName = asset.fileName || `${type}_${Date.now()}.${asset.uri.split('.').pop()}`;
+
+    const newMediaFile: FormMediaFile = {
+      id: `${Date.now()}_${Math.random()}`,
+      type,
+      uri: asset.uri,
+      fileName,
+      size: asset.fileSize || 0,
+      duration: asset.duration,
+      width: asset.width,
+      height: asset.height,
+    };
+
+    // Validate file size
+    const limits = mediaService.getFileSizeLimits();
+    const maxSize = type === 'photo' ? limits.maxPhotoSize : limits.maxVideoSize;
+    if (newMediaFile.size > maxSize) {
+      Alert.alert(
+        'File Too Large',
+        `${type === 'photo' ? 'Photo' : 'Video'} exceeds ${mediaService.formatFileSize(maxSize)} limit`
+      );
+      return;
+    }
+
+    // Validate video duration
+    if (type === 'video' && newMediaFile.duration && newMediaFile.duration > limits.maxVideoDuration) {
+      Alert.alert(
+        'Video Too Long',
+        `Video exceeds ${mediaService.formatDuration(limits.maxVideoDuration)} limit`
+      );
+      return;
+    }
+
+    // Functional state update to avoid stale closures when adding multiple files
+    setFormData(prev => {
+      if (type === 'photo') {
+        const nextPhotos = [...prev.photos, newMediaFile];
+        const nextCover = prev.selectedCoverImageId || (prev.photos.length === 0 ? newMediaFile.id : prev.selectedCoverImageId);
+        return { ...prev, photos: nextPhotos, selectedCoverImageId: nextCover };
+      } else {
+        const nextVideos = [...prev.videos, newMediaFile];
+        return { ...prev, videos: nextVideos };
+      }
+    });
+  };
+
+  const removeMediaFile = (fileId: string, type: 'photo' | 'video') => {
+    if (type === 'photo') {
+      const newPhotos = formData.photos.filter(photo => photo.id !== fileId);
+      updateFormData('photos', newPhotos);
+      
+      // Update cover image if removed photo was the cover
+      if (formData.selectedCoverImageId === fileId) {
+        updateFormData('selectedCoverImageId', newPhotos.length > 0 ? newPhotos[0].id : undefined);
+      }
+    } else {
+      updateFormData('videos', formData.videos.filter(video => video.id !== fileId));
+    }
+  };
+
+  const selectCoverImage = (photoId: string) => {
+    updateFormData('selectedCoverImageId', photoId);
+  };
+
   const handleSubmit = async () => {
     // Validation
     if (!formData.title.trim()) {
@@ -96,12 +294,8 @@ const SubmitNewsScreen: React.FC<Props> = ({ navigation }) => {
       return;
     }
 
-    if (!formData.primaryUrl.trim()) {
-      Alert.alert('Error', 'Please enter a primary URL');
-      return;
-    }
-
-    if (!isValidUrl(formData.primaryUrl)) {
+    // Validate primary URL only if provided
+    if (formData.primaryUrl && formData.primaryUrl.trim() && !isValidUrl(formData.primaryUrl)) {
       Alert.alert('Error', 'Please enter a valid URL (e.g., https://example.com)');
       return;
     }
@@ -127,6 +321,16 @@ const SubmitNewsScreen: React.FC<Props> = ({ navigation }) => {
     if (formData.summary.length > 500) {
       Alert.alert('Error', 'Summary must be less than 500 characters');
       return;
+    }
+
+    // Validate media files
+    const allMedia = [...formData.photos, ...formData.videos];
+    if (allMedia.length > 0) {
+      const validation = mediaService.validateMediaFiles(formData.photos, formData.videos);
+      if (!validation.isValid) {
+        Alert.alert('Media Validation Error', validation.errors.join('\n'));
+        return;
+      }
     }
 
     // Navigate to preview screen
@@ -226,16 +430,18 @@ const SubmitNewsScreen: React.FC<Props> = ({ navigation }) => {
           {/* Primary URL Field */}
           <View style={styles.inputContainer}>
             <Text style={styles.label}>
-              🔗 Primary News URL <Text style={styles.required}>*</Text>
+              🔗 Primary News URL (Optional)
             </Text>
             <TextInput
               style={styles.input}
-              placeholder="https://example.com/article"
+              placeholder="https://example.com/article (optional)"
               value={formData.primaryUrl}
               onChangeText={(text) => {
                 updateFormData('primaryUrl', text);
                 if (text.trim() && isValidUrl(text.trim())) {
                   analyzeUrl(text.trim());
+                } else if (!text.trim()) {
+                  setUrlAnalysis(null);
                 }
               }}
               keyboardType="url"
@@ -268,7 +474,7 @@ const SubmitNewsScreen: React.FC<Props> = ({ navigation }) => {
             )}
             
             <Text style={styles.hint}>
-              Enter the main source URL for this news story
+              Enter the main source URL for this news story (optional - you can submit news without external sources)
             </Text>
           </View>
 
@@ -342,6 +548,143 @@ const SubmitNewsScreen: React.FC<Props> = ({ navigation }) => {
             ]}>
               {formData.summary.length}/500 {formData.summary.length < 50 && '(min 50)'}
             </Text>
+          </View>
+          
+          {/* Media Upload Section */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>
+              📷 Photos & Videos (Optional)
+            </Text>
+            <Text style={styles.hint}>
+              Add up to 8 photos and 1 video (max 3 minutes) to enhance your news story
+            </Text>
+            
+            {/* Media Upload Buttons */}
+            <View style={styles.mediaButtonsContainer}>
+              <TouchableOpacity 
+                style={[
+                  styles.mediaButton, 
+                  formData.photos.length >= mediaService.getFileSizeLimits().maxPhotos && styles.mediaButtonDisabled
+                ]} 
+                onPress={pickPhotos}
+                disabled={formData.photos.length >= mediaService.getFileSizeLimits().maxPhotos}
+              >
+                <Ionicons name="camera" size={20} color="#1DA1F2" />
+                <Text style={styles.mediaButtonText}>
+                  Add Photos ({formData.photos.length}/8)
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[
+                  styles.mediaButton, 
+                  formData.videos.length >= 1 && styles.mediaButtonDisabled
+                ]} 
+                onPress={pickVideo}
+                disabled={formData.videos.length >= 1}
+              >
+                <Ionicons name="videocam" size={20} color="#1DA1F2" />
+                <Text style={styles.mediaButtonText}>
+                  Add Video ({formData.videos.length}/1)
+                </Text>
+              </TouchableOpacity>
+            </View>
+            
+            {/* Photo Preview Grid */}
+            {formData.photos.length > 0 && (
+              <View style={styles.mediaPreviewSection}>
+                <Text style={styles.mediaPreviewTitle}>Photos</Text>
+                <View style={styles.photoGrid}>
+                  {formData.photos.map((photo) => (
+                    <View key={photo.id} style={styles.photoPreviewContainer}>
+                      <Image source={{ uri: photo.uri }} style={styles.photoPreview} />
+                      
+                      {/* Cover Image Selector */}
+                      <TouchableOpacity 
+                        style={[
+                          styles.coverImageButton,
+                          formData.selectedCoverImageId === photo.id && styles.coverImageButtonSelected
+                        ]}
+                        onPress={() => selectCoverImage(photo.id)}
+                      >
+                        <Ionicons 
+                          name={formData.selectedCoverImageId === photo.id ? "star" : "star-outline"} 
+                          size={16} 
+                          color={formData.selectedCoverImageId === photo.id ? "#FFD700" : "#fff"} 
+                        />
+                      </TouchableOpacity>
+                      
+                      {/* Remove Button */}
+                      <TouchableOpacity 
+                        style={styles.removeMediaButton}
+                        onPress={() => removeMediaFile(photo.id, 'photo')}
+                      >
+                        <Ionicons name="close-circle" size={20} color="#FF4444" />
+                      </TouchableOpacity>
+                      
+                      {/* File Info */}
+                      <View style={styles.mediaFileInfo}>
+                        <Text style={styles.mediaFileName} numberOfLines={1}>
+                          {photo.fileName}
+                        </Text>
+                        <Text style={styles.mediaFileSize}>
+                          {mediaService.formatFileSize(photo.size)}
+                        </Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+                
+                {formData.selectedCoverImageId && (
+                  <Text style={styles.coverImageHint}>
+                    ⭐ Selected photo will be used as the cover image
+                  </Text>
+                )}
+              </View>
+            )}
+            
+            {/* Video Preview */}
+            {formData.videos.length > 0 && (
+              <View style={styles.mediaPreviewSection}>
+                <Text style={styles.mediaPreviewTitle}>Video</Text>
+                {formData.videos.map((video) => (
+                  <View key={video.id} style={styles.videoPreviewContainer}>
+                    <Video
+                      source={{ uri: video.uri }}
+                      style={styles.videoPreview}
+                      useNativeControls
+                      resizeMode="contain"
+                      shouldPlay={false}
+                    />
+                    
+                    {/* Remove Button */}
+                    <TouchableOpacity 
+                      style={styles.removeMediaButton}
+                      onPress={() => removeMediaFile(video.id, 'video')}
+                    >
+                      <Ionicons name="close-circle" size={20} color="#FF4444" />
+                    </TouchableOpacity>
+                    
+                    {/* Video Info */}
+                    <View style={styles.mediaFileInfo}>
+                      <Text style={styles.mediaFileName} numberOfLines={1}>
+                        {video.fileName}
+                      </Text>
+                      <View style={styles.videoInfoRow}>
+                        <Text style={styles.mediaFileSize}>
+                          {mediaService.formatFileSize(video.size)}
+                        </Text>
+                        {video.duration && (
+                          <Text style={styles.videoDuration}>
+                            {mediaService.formatDuration(video.duration)}
+                          </Text>
+                        )}
+                      </View>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
           </View>
           
           {/* Urgency Level */}
@@ -525,7 +868,7 @@ const SubmitNewsScreen: React.FC<Props> = ({ navigation }) => {
             <View style={styles.guideline}>
               <Ionicons name="checkmark-circle-outline" size={16} color="#10B981" />
               <Text style={styles.guidelineText}>
-                Share from credible, verifiable news sources
+                Share from credible, verifiable news sources (optional but recommended)
               </Text>
             </View>
             <View style={styles.guideline}>
@@ -897,6 +1240,139 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  
+  // Media upload styles
+  mediaButtonsContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 8,
+  },
+  mediaButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F0F9FF',
+    borderWidth: 1,
+    borderColor: '#1DA1F2',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 8,
+  },
+  mediaButtonDisabled: {
+    backgroundColor: '#F5F5F5',
+    borderColor: '#DDD',
+    opacity: 0.6,
+  },
+  mediaButtonText: {
+    fontSize: 14,
+    color: '#1DA1F2',
+    fontWeight: '600',
+  },
+  
+  // Media preview styles
+  mediaPreviewSection: {
+    marginTop: 16,
+  },
+  mediaPreviewTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 12,
+  },
+  
+  // Photo grid styles
+  photoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  photoPreviewContainer: {
+    width: (screenWidth - 72) / 3, // 3 columns with gaps
+    aspectRatio: 1,
+    position: 'relative',
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  photoPreview: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 8,
+  },
+  
+  // Cover image selector
+  coverImageButton: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 12,
+    padding: 4,
+  },
+  coverImageButtonSelected: {
+    backgroundColor: 'rgba(255,215,0,0.8)',
+  },
+  
+  // Remove button
+  removeMediaButton: {
+    position: 'absolute',
+    top: 4,
+    left: 4,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    borderRadius: 10,
+  },
+  
+  // Media file info
+  mediaFileInfo: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    padding: 4,
+  },
+  mediaFileName: {
+    fontSize: 10,
+    color: '#fff',
+    fontWeight: '500',
+  },
+  mediaFileSize: {
+    fontSize: 9,
+    color: '#ccc',
+  },
+  
+  // Video preview styles
+  videoPreviewContainer: {
+    position: 'relative',
+    borderRadius: 8,
+    overflow: 'hidden',
+    marginTop: 8,
+  },
+  videoPreview: {
+    width: '100%',
+    height: 200,
+    borderRadius: 8,
+  },
+  videoInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  videoDuration: {
+    fontSize: 9,
+    color: '#FFD700',
+    fontWeight: '600',
+  },
+  
+  // Cover image hint
+  coverImageHint: {
+    fontSize: 12,
+    color: '#666',
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginTop: 8,
   },
 });
 

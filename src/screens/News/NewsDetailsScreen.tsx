@@ -1,5 +1,18 @@
 import React, { useState, useEffect, useLayoutEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Share, Linking, Alert } from 'react-native';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  ScrollView, 
+  ActivityIndicator, 
+  Share, 
+  Linking, 
+  Alert, 
+  Image,
+  TouchableOpacity,
+  Dimensions
+} from 'react-native';
+import { Video } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
@@ -14,6 +27,8 @@ import { useAuth } from '../../context/AuthContext';
 import Card from '../../components/ui/Card';
 import ActionButton from '../../components/ui/ActionButton';
 // import AnimatedCard from '../../components/ui/AnimatedCard';
+
+const { width: screenWidth } = Dimensions.get('window');
 
 
 type Props = {
@@ -132,6 +147,16 @@ const NewsDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
     const wordsPerMinute = 200;
     const words = text.split(' ').length;
     return Math.ceil(words / wordsPerMinute);
+  };
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 B';
+    
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
   };
 
 
@@ -256,6 +281,88 @@ const NewsDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
           )}
           
         </Card>
+        
+        {/* Media Gallery */}
+        {story.media && (story.media.photos.length > 0 || story.media.videos.length > 0) && (
+          <Card style={styles.mediaCard} padding="medium" shadow={true}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Media</Text>
+              <View style={styles.mediaCountBadge}>
+                <Text style={styles.mediaCountText}>
+                  {story.media.totalMediaCount}
+                </Text>
+              </View>
+            </View>
+            
+            {/* Photos Grid */}
+            {story.media.photos.length > 0 && (
+              <View style={styles.photosSection}>
+                <Text style={styles.mediaSubtitle}>Photos</Text>
+                <View style={styles.photosGrid}>
+                  {story.media.photos.map((photo, index) => (
+                    <TouchableOpacity 
+                      key={photo.id} 
+                      style={styles.photoContainer}
+                      onPress={() => {
+                        // Could implement photo viewer modal here
+                        console.log('Photo pressed:', photo.url);
+                      }}
+                    >
+                      <Image 
+                        source={{ uri: photo.url }} 
+                        style={styles.photoThumbnail}
+                        resizeMode="cover"
+                      />
+                      {/* Photo index */}
+                      <View style={styles.photoIndex}>
+                        <Text style={styles.photoIndexText}>{index + 1}</Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            )}
+            
+            {/* Videos */}
+            {story.media.videos.length > 0 && (
+              <View style={styles.videosSection}>
+                <Text style={styles.mediaSubtitle}>Videos</Text>
+                {story.media.videos.map((video) => (
+                  <View key={video.id} style={styles.videoContainer}>
+                    <Video
+                      source={{ uri: video.url }}
+                      style={styles.videoPlayer}
+                      useNativeControls
+                      resizeMode="contain"
+                      shouldPlay={false}
+                    />
+                    <View style={styles.videoInfo}>
+                      <Text style={styles.videoTitle} numberOfLines={1}>
+                        {video.fileName}
+                      </Text>
+                      <View style={styles.videoMeta}>
+                        {video.duration && (
+                          <View style={styles.videoMetaItem}>
+                            <Ionicons name="time-outline" size={12} color="#6B7280" />
+                            <Text style={styles.videoMetaText}>
+                              {Math.floor(video.duration / 60)}:{String(Math.floor(video.duration % 60)).padStart(2, '0')}
+                            </Text>
+                          </View>
+                        )}
+                        <View style={styles.videoMetaItem}>
+                          <Ionicons name="download-outline" size={12} color="#6B7280" />
+                          <Text style={styles.videoMetaText}>
+                            {formatFileSize(video.size)}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+          </Card>
+        )}
         
         {/* AI Summary */}
         {story.aiSummary && (
@@ -541,6 +648,103 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#0369A1',
     fontWeight: '600',
+  },
+
+  // Media Gallery styles
+  mediaCard: {
+    margin: 16,
+    marginTop: 8,
+    marginBottom: 12,
+  },
+  mediaCountBadge: {
+    backgroundColor: '#E5E7EB',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+  },
+  mediaCountText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  mediaSubtitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 12,
+  },
+
+  // Photos styles
+  photosSection: {
+    marginBottom: 20,
+  },
+  photosGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  photoContainer: {
+    width: (screenWidth - 80) / 3, // 3 columns with gaps and margins
+    aspectRatio: 1,
+    position: 'relative',
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  photoThumbnail: {
+    width: '100%',
+    height: '100%',
+  },
+  photoIndex: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    borderRadius: 10,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  photoIndexText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+
+  // Videos styles
+  videosSection: {
+    marginTop: 12,
+  },
+  videoContainer: {
+    marginBottom: 16,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  videoPlayer: {
+    width: '100%',
+    height: 200,
+  },
+  videoInfo: {
+    padding: 12,
+    backgroundColor: '#F9FAFB',
+  },
+  videoTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  videoMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  videoMetaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  videoMetaText: {
+    fontSize: 12,
+    color: '#6B7280',
   },
 });
 

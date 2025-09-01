@@ -100,10 +100,22 @@ export interface SearchFilters {
   source?: string[];
 }
 
+// Media file for form handling
+export interface FormMediaFile {
+  id: string;
+  type: 'photo' | 'video';
+  uri: string; // Local URI for React Native
+  fileName: string;
+  size: number;
+  duration?: number; // for videos in seconds
+  width?: number;
+  height?: number;
+}
+
 // User-generated content types
 export interface UserNewsSubmissionForm {
   title: string;
-  primaryUrl: string;
+  primaryUrl?: string; // Now optional
   summary: string;
   category: string;
   tags: string[];
@@ -114,4 +126,8 @@ export interface UserNewsSubmissionForm {
   suggestedBias?: 'left' | 'center' | 'right';
   suggestedCredibility?: number;
   factCheckNotes?: string;
+  // Media fields
+  photos: FormMediaFile[];
+  videos: FormMediaFile[];
+  selectedCoverImageId?: string; // ID of the photo to use as cover
 }

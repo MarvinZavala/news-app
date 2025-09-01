@@ -18,7 +18,10 @@ import {
   QueryDocumentSnapshot
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import { NewsStory, UserVote, NewsFilters, UserNewsSubmission, NewsListResponse } from '../types/news';
+import { NewsStory, UserVote, NewsFilters, UserNewsSubmission, NewsListResponse, MediaFile, NewsMedia } from '../types/news';
+import { FormMediaFile } from '../types/navigation';
+import { mediaService, UploadProgress } from './MediaService';
+import { sanitizeForFirestore } from '../utils/sanitize';
 
 export class NewsService {
   private static instance: NewsService;
@@ -209,10 +212,10 @@ export class NewsService {
     }
   }
 
-  // Submit user-generated news - Enhanced with new fields
+  // Submit user-generated news - Enhanced with media support
   async submitUserNews(submission: {
     title: string;
-    primaryUrl: string;
+    primaryUrl?: string; // Now optional
     summary: string;
     category: string;
     submittedBy: string;
@@ -222,20 +225,94 @@ export class NewsService {
     suggestedBias?: 'left' | 'center' | 'right';
     suggestedCredibility?: number;
     sourceReputation?: 'verified' | 'questionable' | 'unknown';
-  }): Promise<string> {
+    photos?: FormMediaFile[];
+    videos?: FormMediaFile[];
+    selectedCoverImageId?: string;
+  }, onMediaUploadProgress?: (progresses: UploadProgress[]) => void): Promise<string> {
     try {
       console.log('🚀 Creating user-generated news story:', submission);
       
+      // First, validate media files if present
+      const allMedia = [...(submission.photos || []), ...(submission.videos || [])];
+      if (allMedia.length > 0) {
+        const validation = mediaService.validateMediaFiles(
+          submission.photos || [],
+          submission.videos || []
+        );
+        
+        if (!validation.isValid) {
+          throw new Error(`Media validation failed: ${validation.errors.join(', ')}`);
+        }
+      }
+      
+      // Create the news story first to get an ID
+      const tempStoryData = {
+        title: submission.title,
+        summary: submission.summary,
+        category: submission.category,
+        submittedBy: submission.submittedBy,
+        isUserGenerated: true,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      };
+      
+      const docRef = await addDoc(this.newsCollection, tempStoryData);
+      const newsId = docRef.id;
+      
+      // Upload media files if present
+      let newsMedia: NewsMedia | undefined;
+      let uploadedPhotos: MediaFile[] = [];
+      let uploadedVideos: MediaFile[] = [];
+      
+      if (allMedia.length > 0) {
+        console.log('📁 Uploading media files...');
+        const uploadedFiles = await mediaService.uploadMediaFiles(
+          allMedia,
+          newsId,
+          submission.submittedBy,
+          onMediaUploadProgress
+        );
+        
+        // Separate photos and videos
+        uploadedPhotos = uploadedFiles.filter(f => f.type === 'photo');
+        uploadedVideos = uploadedFiles.filter(f => f.type === 'video');
+        
+        // Find cover image
+        let coverImageUrl: string | undefined;
+        if (submission.selectedCoverImageId && uploadedPhotos.length > 0) {
+          const coverImage = uploadedPhotos.find(p => 
+            p.id.includes(submission.selectedCoverImageId!)
+          );
+          coverImageUrl = coverImage?.url;
+        } else if (uploadedPhotos.length > 0) {
+          // Use first photo as cover if no specific selection
+          coverImageUrl = uploadedPhotos[0].url;
+        }
+        
+        newsMedia = {
+          photos: uploadedPhotos,
+          videos: uploadedVideos,
+          coverImageUrl,
+          totalMediaCount: uploadedPhotos.length + uploadedVideos.length
+        };
+      }
+      
       // Create enhanced NewsStory object for user-generated content
-      const allSources = [submission.primaryUrl, ...(submission.additionalSources || [])];
+      const allSources = [
+        ...(submission.primaryUrl ? [submission.primaryUrl] : []),
+        ...(submission.additionalSources || [])
+      ];
       const totalSourceCount = allSources.length;
       
       // Create sources array
       const sources = allSources.map((url, index) => {
         const domain = this.extractDomain(url);
+        const isPrimarySource = submission.primaryUrl && url === submission.primaryUrl;
+        const sourceNumber = submission.primaryUrl ? index : index + 1;
+        
         return {
           id: `user-source-${Date.now()}-${index}`,
-          name: index === 0 ? 'Primary Source' : `Additional Source ${index}`,
+          name: isPrimarySource ? 'Primary Source' : `Additional Source ${sourceNumber}`,
           url,
           bias: submission.suggestedBias || 'center' as const,
           credibilityScore: submission.suggestedCredibility || this.getSourceCredibilityScore(submission.sourceReputation),
@@ -250,67 +327,68 @@ export class NewsService {
         totalSourceCount
       );
       
-      const userGeneratedStory = {
+      // Generate content based on available sources
+      let content = `User-submitted news: ${submission.summary}`;
+      if (submission.primaryUrl) {
+        content += `\n\nPrimary Source: ${submission.primaryUrl}`;
+      }
+      if (submission.additionalSources?.length) {
+        content += `\n\nAdditional Sources:\n${submission.additionalSources.join('\n')}`;
+      }
+      if (!submission.primaryUrl && !submission.additionalSources?.length) {
+        content += '\n\nNo external sources provided.';
+      }
+      
+      const storyData: any = {
         title: submission.title,
         summary: submission.summary,
-        content: `User-submitted news: ${submission.summary}\n\nPrimary Source: ${submission.primaryUrl}${submission.additionalSources?.length ? `\n\nAdditional Sources:\n${submission.additionalSources.join('\n')}` : ''}`,
+        content,
         category: submission.category,
-        
-        // Enhanced bias scoring
-        biasScore,
-        
-        // Multiple sources support
-        totalSources: totalSourceCount,
-        sources,
-        
-        // Community engagement (starts with user's input or default)
-        userVotes: [],
-        totalVotes: 0,
-        averageCredibility: submission.suggestedCredibility || this.getSourceCredibilityScore(submission.sourceReputation),
-        averageQuality: submission.suggestedCredibility || this.getSourceCredibilityScore(submission.sourceReputation),
-        
-        // AI analysis (none initially - omitted undefined fields)
-        
-        // Enhanced metadata
-        isBreaking: submission.urgencyLevel === 'breaking',
-        isTrending: submission.urgencyLevel === 'developing',
-        isUserGenerated: true,
-        submittedBy: submission.submittedBy,
-        
-        // Enhanced tags and categorization
-        tags: submission.tags || [],
-        urgencyLevel: submission.urgencyLevel || 'normal',
-        sourceReputation: submission.sourceReputation || 'unknown',
-        
-        // Community validation flags
-        communityFlags: {
-          spam: 0,
-          misinformation: 0,
-          duplicate: 0,
-          inappropriate: 0
-        },
-        needsFactCheck: submission.sourceReputation === 'questionable' || !submission.suggestedCredibility,
-        
-        // Engagement metrics
-        viewCount: 0,
-        shareCount: 0,
-        bookmarkCount: 0,
-        commentCount: 0,
-        
-        // Timestamps
-        createdAt: new Date(),
-        updatedAt: new Date()
       };
 
-      // Add directly to news collection (not user submissions)
-      const docRef = await addDoc(this.newsCollection, {
-        ...userGeneratedStory,
-        createdAt: serverTimestamp(),
+      // Add all story properties to storyData
+      storyData.biasScore = biasScore;
+      storyData.totalSources = totalSourceCount;
+      storyData.sources = sources;
+      storyData.userVotes = [];
+      storyData.totalVotes = 0;
+      storyData.averageCredibility = submission.suggestedCredibility || this.getSourceCredibilityScore(submission.sourceReputation);
+      storyData.averageQuality = submission.suggestedCredibility || this.getSourceCredibilityScore(submission.sourceReputation);
+      storyData.isBreaking = submission.urgencyLevel === 'breaking';
+      storyData.isTrending = submission.urgencyLevel === 'developing';
+      storyData.isUserGenerated = true;
+      storyData.submittedBy = submission.submittedBy;
+      storyData.tags = submission.tags || [];
+      storyData.urgencyLevel = submission.urgencyLevel || 'normal';
+      storyData.sourceReputation = submission.sourceReputation || 'unknown';
+      storyData.communityFlags = {
+        spam: 0,
+        misinformation: 0,
+        duplicate: 0,
+        inappropriate: 0
+      };
+      storyData.needsFactCheck = submission.sourceReputation === 'questionable' || !submission.suggestedCredibility;
+      storyData.viewCount = 0;
+      storyData.shareCount = 0;
+      storyData.bookmarkCount = 0;
+      storyData.commentCount = 0;
+      storyData.createdAt = new Date();
+      storyData.updatedAt = new Date();
+
+      // Add media only if it exists
+      if (newsMedia) {
+        storyData.media = newsMedia;
+      }
+
+      // Update the existing document with complete story data
+      const cleanStoryData = sanitizeForFirestore(storyData);
+      await updateDoc(docRef, {
+        ...cleanStoryData,
         updatedAt: serverTimestamp()
       });
 
-      console.log('✅ User-generated news story created successfully:', docRef.id);
-      return docRef.id;
+      console.log('✅ User-generated news story created successfully:', newsId);
+      return newsId;
     } catch (error) {
       console.error('❌ Error submitting user news:', error);
       throw error;

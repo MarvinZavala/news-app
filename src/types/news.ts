@@ -14,6 +14,28 @@ export interface NewsSource {
   publishedAt: Date;
 }
 
+// Media interfaces for photos and videos
+export interface MediaFile {
+  id: string;
+  type: 'photo' | 'video';
+  url: string;
+  thumbnailUrl?: string;
+  fileName: string;
+  size: number; // bytes
+  duration?: number; // for videos in seconds
+  width?: number;
+  height?: number;
+  uploadedAt: Date;
+  uploadedBy: string; // userId
+}
+
+export interface NewsMedia {
+  photos: MediaFile[];
+  videos: MediaFile[];
+  coverImageUrl?: string; // URL of the selected cover image
+  totalMediaCount: number;
+}
+
 export interface UserVote {
   userId: string;
   biasVote: 'left' | 'center' | 'right';
@@ -66,6 +88,9 @@ export interface NewsStory {
   summary: string;
   content?: string;
   category: string;
+  
+  // Media content
+  media?: NewsMedia;
   
   // Bias Analysis
   biasScore: BiasScore;
@@ -120,6 +145,9 @@ export interface UserNewsSubmission {
   primaryUrl: string; // Main source URL
   summary: string;
   category: string;
+  
+  // Media content
+  media?: NewsMedia;
   
   // Enhanced submission fields
   tags: string[]; // Relevant tags/keywords
