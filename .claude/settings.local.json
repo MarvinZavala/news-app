@@ -5,7 +5,10 @@
       "Bash(npx expo build:web:*)",
       "Bash(npm install:*)",
       "Bash(npx expo install expo-av expo-image-picker)",
-      "Bash(npx expo:*)"
+      "Bash(npx expo:*)",
+      "Bash(source:*)",
+      "Bash(pip install:*)",
+      "Bash(python:*)"
     ],
     "deny": [],
     "ask": []

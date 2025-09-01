@@ -20,6 +20,7 @@ import { NewsStackParamList } from '../../types/navigation';
 import { NewsStory } from '../../types/news';
 import { newsService } from '../../services/NewsService';
 import { bookmarkService } from '../../services/BookmarkService';
+import { summarizationService } from '../../services/SummarizationService';
 import CommentSection from '../../components/CommentSection';
 import CommunityVoting from '../../components/CommunityVoting';
 import { useAuth } from '../../context/AuthContext';
@@ -43,6 +44,8 @@ const NewsDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
   const [loading, setLoading] = useState(true);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [bookmarkLoading, setBookmarkLoading] = useState(false);
+  const [summary, setSummary] = useState<string | null>(null);
+  const [isSummaryLoading, setIsSummaryLoading] = useState<boolean>(false);
   // const [fadeAnim] = useState(new Animated.Value(0));
 
   useEffect(() => {
@@ -56,6 +59,25 @@ const NewsDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
     //   useNativeDriver: true,
     // }).start();
   }, [newsId]);
+
+  useEffect(() => {
+    // Solo busca el resumen si tenemos una noticia y esta no tiene ya un resumen.
+    if (story && story.content && !summary) {
+      const fetchSummary = async () => {
+        setIsSummaryLoading(true);
+        try {
+          const generatedSummary = await summarizationService.getSummary(story.content);
+          setSummary(generatedSummary);
+        } catch (error) {
+          console.error(error);
+          setSummary("Resumen no disponible en este momento.");
+        } finally {
+          setIsSummaryLoading(false);
+        }
+      };
+      fetchSummary();
+    }
+  }, [story, summary]); // Depende de 'story' y 'summary'
 
   const checkBookmarkStatus = async () => {
     if (!user) return;
@@ -281,6 +303,21 @@ const NewsDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
           )}
           
         </Card>
+
+        {/* AI Summary Card */}
+        {(isSummaryLoading || summary) && (
+          <Card style={styles.aiCard} padding="medium" shadow={true}>
+            <View style={styles.aiHeader}>
+              <Ionicons name="sparkles" size={18} color="#8B5CF6" />
+              <Text style={styles.aiLabel}>Resumen por IA</Text>
+            </View>
+            {isSummaryLoading ? (
+              <ActivityIndicator size="small" color="#8B5CF6" />
+            ) : (
+              <Text style={styles.aiSummary}>{summary}</Text>
+            )}
+          </Card>
+        )}
         
         {/* Media Gallery */}
         {story.media && (story.media.photos.length > 0 || story.media.videos.length > 0) && (
@@ -745,6 +782,28 @@ const styles = StyleSheet.create({
   videoMetaText: {
     fontSize: 12,
     color: '#6B7280',
+  },
+  
+  // AI Summary Card Styles
+  aiCard: {
+    marginHorizontal: 16,
+    marginBottom: 16,
+  },
+  aiHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  aiLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#8B5CF6',
+  },
+  aiSummary: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#374151',
   },
 });
 
