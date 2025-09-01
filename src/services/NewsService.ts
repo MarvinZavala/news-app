@@ -367,7 +367,9 @@ export class NewsService {
         duplicate: 0,
         inappropriate: 0
       };
-      storyData.needsFactCheck = submission.sourceReputation === 'questionable' || !submission.suggestedCredibility;
+      const isVerifiedSource = submission.sourceReputation === 'verified';
+      const lowOrMissingCred = !submission.suggestedCredibility || submission.suggestedCredibility < 3;
+      storyData.needsFactCheck = !isVerifiedSource && (submission.sourceReputation === 'questionable' || lowOrMissingCred);
       storyData.viewCount = 0;
       storyData.shareCount = 0;
       storyData.bookmarkCount = 0;

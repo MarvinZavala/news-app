@@ -401,7 +401,7 @@ const NewsDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
           newsStoryId={story.id}
         />
         
-        {/* Comments Section */}
+        {/* Discussions Section */}
         <CommentSection 
           newsStoryId={story.id} 
           initialCommentCount={story.commentCount}

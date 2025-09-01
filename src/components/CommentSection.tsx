@@ -230,7 +230,7 @@ const CommentSection: React.FC<Props> = ({ newsStoryId, initialCommentCount = 0 
       <View style={styles.container}>
         <View style={styles.header}>
           <Ionicons name="chatbubbles-outline" size={20} color="#1DA1F2" />
-          <Text style={styles.headerTitle}>Comments ({commentCount})</Text>
+          <Text style={styles.headerTitle}>Discussions ({commentCount})</Text>
         </View>
         <View style={styles.loginPrompt}>
           <Text style={styles.loginPromptText}>Please log in to view and post comments</Text>

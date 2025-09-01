@@ -9,9 +9,10 @@ import {
   RefreshControl,
   Alert,
   Share,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { NewsStackParamList } from '../../types/navigation';
 import { NewsStory, NewsFilters } from '../../types/news';
@@ -183,7 +184,11 @@ const NewsListScreen: React.FC<Props> = ({ navigation }) => {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Latest News</Text>
-        <View style={styles.headerActions}>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.headerActions}
+        >
           <TouchableOpacity
             style={[
               styles.headerButton,
@@ -237,7 +242,25 @@ const NewsListScreen: React.FC<Props> = ({ navigation }) => {
               filters.sortBy === 'mostVoted' && styles.headerButtonTextActive
             ]}>Popular</Text>
           </TouchableOpacity>
-        </View>
+          
+          <TouchableOpacity
+            style={[
+              styles.headerButton,
+              filters.sortBy === 'underTheRadar' && styles.headerButtonActive
+            ]}
+            onPress={() => handleFilterChange({ sortBy: 'underTheRadar' })}
+          >
+            <MaterialIcons 
+              name="radar" 
+              size={16} 
+              color={filters.sortBy === 'underTheRadar' ? '#fff' : '#1DA1F2'} 
+            />
+            <Text style={[
+              styles.headerButtonText,
+              filters.sortBy === 'underTheRadar' && styles.headerButtonTextActive
+            ]}>Under-the-Radar</Text>
+          </TouchableOpacity>
+        </ScrollView>
       </View>
 
       <FlatList

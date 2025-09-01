@@ -42,7 +42,7 @@ export const HomeStackNavigator = () => {
         name="NewsComments" 
         component={NewsCommentsScreen}
         options={({ route }) => ({ 
-          title: 'Comments',
+          title: 'Discussions',
           headerBackTitleVisible: false,
         })}
       />

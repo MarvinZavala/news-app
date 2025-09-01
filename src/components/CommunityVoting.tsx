@@ -558,6 +558,82 @@ const styles = StyleSheet.create({
   submitButton: {
     marginTop: 8,
   },
+  // Bias Visualization
+  biasVisualization: {
+    marginTop: 8,
+  },
+  combinedBiasBar: {
+    flexDirection: 'row',
+    height: 8,
+    borderRadius: 4,
+    overflow: 'hidden',
+    backgroundColor: '#F3F4F6',
+    marginBottom: 12,
+  },
+  combinedSegment: {
+    minWidth: 1,
+  },
+  biasItemsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 4,
+  },
+  biasItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  biasLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#374151',
+    marginBottom: 2,
+  },
+  biasPercentage: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  // Quality Metrics
+  metricsCard: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  metricsTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 12,
+  },
+  metricsGrid: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  metricCard: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  metricLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#6B7280',
+    marginBottom: 8,
+  },
+  metricStarsRow: {
+    marginBottom: 4,
+  },
+  metricScore: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  starsContainer: {
+    flexDirection: 'row',
+    gap: 2,
+  },
+  interactiveStar: {
+    padding: 4,
+  },
   // Login Prompt
   loginPrompt: {
     paddingTop: 16,

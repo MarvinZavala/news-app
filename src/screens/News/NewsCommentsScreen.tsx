@@ -195,7 +195,7 @@ const NewsCommentsScreen: React.FC<Props> = ({ navigation, route }) => {
   if (loading) {
     return (
       <View style={styles.container}>
-        <Header title="Comments" onBackPress={() => navigation.goBack()} />
+        <Header title="Discussions" onBackPress={() => navigation.goBack()} />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#1F2937" />
           <Text style={styles.loadingText}>Loading comments...</Text>

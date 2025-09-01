@@ -83,9 +83,9 @@ const NewsCard: React.FC<Props> = ({ story, onPress, onBookmark, onShare }) => {
 
   const getBiasColor = (bias: 'left' | 'center' | 'right'): string => {
     switch (bias) {
-      case 'left': return '#FF6B6B';
+      case 'left': return '#1DA1F2'; // App blue for Left
       case 'center': return '#4ECDC4';
-      case 'right': return '#45B7D1';
+      case 'right': return '#FF6B6B'; // Red for Right
       default: return '#DDD';
     }
   };
@@ -280,12 +280,20 @@ const NewsCard: React.FC<Props> = ({ story, onPress, onBookmark, onShare }) => {
       {/* Engagement section */}
       <View style={styles.engagementSection}>
         <View style={styles.credibilityContainer}>
-          <View style={styles.stars}>
-            {getCredibilityStars(story.averageCredibility || 0)}
+          <View style={styles.credibilityRow}>
+            <View style={styles.stars}>
+              {getCredibilityStars(story.averageCredibility || 0)}
+            </View>
+            <Text style={styles.credibilityScore}>
+              {(story.averageCredibility || 0).toFixed(1)}
+            </Text>
           </View>
-          <Text style={styles.credibilityScore}>
-            {(story.averageCredibility || 0).toFixed(1)}
-          </Text>
+          {story.isUserGenerated && (
+            <View style={styles.communitySubmittedRow}>
+              <Ionicons name="people" size={10} color="#1DA1F2" />
+              <Text style={styles.communitySubmittedText}>Community Submitted</Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.votingContainer}>
@@ -336,20 +344,13 @@ const NewsCard: React.FC<Props> = ({ story, onPress, onBookmark, onShare }) => {
       {/* Enhanced user generated content indicator */}
       {story.isUserGenerated && (
         <View style={styles.userGeneratedSection}>
-          <View style={styles.userGeneratedBadge}>
-            <Ionicons name="people" size={10} color="#9B59B6" />
-            <Text style={styles.userGeneratedText}>Community Submitted</Text>
-          </View>
-          
-          {/* Community validation indicators */}
-          {story.needsFactCheck && (
+          {/* Community validation indicators (keep top-right badges for status) */}
+          {story.needsFactCheck && story.sourceReputation !== 'verified' && (
             <View style={styles.factCheckBadge}>
               <Ionicons name="search" size={10} color="#F59E0B" />
               <Text style={styles.factCheckText}>Fact Check Needed</Text>
             </View>
           )}
-          
-          {/* Additional sources indicator */}
           {story.totalSources > 1 && (
             <View style={styles.multiSourceBadge}>
               <Ionicons name="link" size={10} color="#10B981" />
@@ -612,6 +613,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   credibilityContainer: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+  },
+  credibilityRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -650,6 +655,17 @@ const styles = StyleSheet.create({
   actionButtons: {
     flexDirection: 'row',
     gap: 12,
+  },
+  communitySubmittedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+    gap: 4,
+  },
+  communitySubmittedText: {
+    fontSize: 10,
+    color: '#black',
+    fontWeight: 'bold',
   },
   actionButton: {
     padding: 8,
