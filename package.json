@@ -9,7 +9,9 @@
     "web": "expo start --web"
   },
   "dependencies": {
+    "@expo/metro-runtime": "~5.0.4",
     "@expo/vector-icons": "^14.1.0",
+    "@lottiefiles/dotlottie-react": "^0.15.2",
     "@react-native-async-storage/async-storage": "2.1.2",
     "@react-native-firebase/app": "^23.1.1",
     "@react-native-firebase/auth": "^23.1.1",
@@ -23,11 +25,13 @@
     "firebase": "^12.1.0",
     "lottie-react-native": "^7.3.2",
     "react": "19.0.0",
+    "react-dom": "19.0.0",
     "react-native": "0.79.5",
     "react-native-gesture-handler": "~2.24.0",
     "react-native-reanimated": "~3.17.4",
     "react-native-safe-area-context": "5.4.0",
-    "react-native-screens": "~4.11.1"
+    "react-native-screens": "~4.11.1",
+    "react-native-web": "^0.20.0"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
