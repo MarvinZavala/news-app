@@ -66,7 +66,7 @@ const NewsDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
       const fetchSummary = async () => {
         setIsSummaryLoading(true);
         try {
-          const generatedSummary = await summarizationService.getSummary(story.content);
+          const generatedSummary = await summarizationService.getSummary(story.content, story.title);
           setSummary(generatedSummary);
         } catch (error) {
           console.error(error);

@@ -1,7 +1,7 @@
 import { HF_API_URL, HF_API_TOKEN, isValidToken } from '../config/aiConfig';
 
 class SummarizationService {
-  async getSummary(articleText: string): Promise<string> {
+  async getSummary(articleText: string, title?: string): Promise<string> {
     try {
       // Verificar primero si tenemos un token válido
       if (!isValidToken()) {
@@ -9,8 +9,11 @@ class SummarizationService {
         throw new Error('No valid Hugging Face API token configured. Please add your token to .env.local file.');
       }
 
-      // Preparar texto para Hugging Face API - texto más largo para mejor contexto
-      const truncatedText = articleText.substring(0, 2048); // Aumentar a 2048 caracteres
+      // Preparar texto para Hugging Face API - optimizado para resumir puntos clave
+      const promptPrefix = 'Key points to summarize: ';
+      const titlePrefix = title ? `${title}. ` : '';
+      const fullText = promptPrefix + titlePrefix + articleText;
+      const truncatedText = fullText.substring(0, 1024);
       
       const response = await fetch(HF_API_URL, {
         method: 'POST',
@@ -21,13 +24,14 @@ class SummarizationService {
         body: JSON.stringify({
           inputs: truncatedText,
           parameters: {
-            max_length: 80,    // Resúmenes más cortos
-            min_length: 30,    // Mínimo más bajo
-            do_sample: true,   // Activar sampling para diversidad
-            temperature: 0.7,  // Agregar creatividad controlada
-            repetition_penalty: 1.2, // Evitar repetición
-            length_penalty: 2.0,      // Favorecer resúmenes concisos
-            no_repeat_ngram_size: 3   // Evitar repetir frases
+            max_length: 80,     // Más corto para forzar síntesis
+            min_length: 25,     // Mínimo para evitar muy corto
+            do_sample: true,    // Activar sampling para creatividad
+            temperature: 0.8,   // Creatividad moderada para parafrasear
+            top_k: 50,         // Limitar opciones para coherencia
+            repetition_penalty: 1.3, // Penalizar repetición de texto original
+            length_penalty: 2.0,     // Favorecer resúmenes concisos
+            no_repeat_ngram_size: 3  // Evitar copiar frases del original
           }
         }),
       });
