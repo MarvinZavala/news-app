@@ -5,7 +5,7 @@ export const HF_API_URL = "https://api-inference.huggingface.co/models/facebook/
 
 // Verificamos que el token exista y no esté vacío
 const token = Constants.expoConfig?.extra?.HF_API_TOKEN;
-export const HF_API_TOKEN = token && token !== "your_huggingface_token_here" ? token : "";
+export const HF_API_TOKEN = token || "";
 
 // Helper para verificar si el token es válido
 export const isValidToken = () => {
