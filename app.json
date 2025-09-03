@@ -8,7 +8,7 @@
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "extra": {
-      "HF_API_TOKEN": process.env.HF_API_TOKEN
+      "HF_API_TOKEN": ""
     },
     "splash": {
       "image": "./assets/splash-icon.png",
