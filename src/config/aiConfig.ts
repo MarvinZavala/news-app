@@ -1,7 +1,7 @@
 import Constants from 'expo-constants';
 
-// Configuración para Hugging Face Inference API
-export const HF_API_URL = "https://api-inference.huggingface.co/models/facebook/bart-large-cnn";
+// Configuración para Hugging Face Inference API - Modelo optimizado para resúmenes
+export const HF_API_URL = "https://api-inference.huggingface.co/models/sshleifer/distilbart-cnn-12-6";
 
 // Verificamos que el token exista y no esté vacío
 const token = Constants.expoConfig?.extra?.HF_API_TOKEN;

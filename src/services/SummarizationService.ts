@@ -9,8 +9,8 @@ class SummarizationService {
         throw new Error('No valid Hugging Face API token configured. Please add your token to .env.local file.');
       }
 
-      // Preparar texto para Hugging Face API
-      const truncatedText = articleText.substring(0, 1024); // Limitar a 1024 caracteres
+      // Preparar texto para Hugging Face API - texto más largo para mejor contexto
+      const truncatedText = articleText.substring(0, 2048); // Aumentar a 2048 caracteres
       
       const response = await fetch(HF_API_URL, {
         method: 'POST',
@@ -21,9 +21,13 @@ class SummarizationService {
         body: JSON.stringify({
           inputs: truncatedText,
           parameters: {
-            max_length: 130,
-            min_length: 50,
-            do_sample: false
+            max_length: 80,    // Resúmenes más cortos
+            min_length: 30,    // Mínimo más bajo
+            do_sample: true,   // Activar sampling para diversidad
+            temperature: 0.7,  // Agregar creatividad controlada
+            repetition_penalty: 1.2, // Evitar repetición
+            length_penalty: 2.0,      // Favorecer resúmenes concisos
+            no_repeat_ngram_size: 3   // Evitar repetir frases
           }
         }),
       });
