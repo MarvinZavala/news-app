@@ -6,7 +6,6 @@ import {
   ScrollView, 
   ActivityIndicator, 
   Share, 
-  Linking, 
   Alert, 
   Image,
   TouchableOpacity,
@@ -65,7 +64,7 @@ const NewsDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
       const fetchSummary = async () => {
         setIsSummaryLoading(true);
         try {
-          const generatedSummary = await summarizationService.getSummary(story.content, story.title);
+          const generatedSummary = await summarizationService.getSummary(story.content || '', story.title);
           setSummary(generatedSummary);
         } catch (error) {
           console.error(error);
@@ -160,9 +159,6 @@ const NewsDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
     }
   };
 
-  const handleOpenSource = (url: string) => {
-    Linking.openURL(url);
-  };
 
   const getReadingTime = (text: string): number => {
     const wordsPerMinute = 200;
@@ -471,7 +467,7 @@ const NewsDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
               <Text style={styles.sourcesBadgeText}>{story.totalSources}</Text>
             </View>
           </View>
-          {story.sources.map((source, index) => (
+          {story.sources.map((source) => (
             <View key={source.id} style={styles.sourceItem}>
               <View style={styles.sourceIcon}>
                 <Ionicons name="link" size={16} color="#6B7280" />
@@ -835,36 +831,7 @@ const styles = StyleSheet.create({
     color: '#6B7280',
   },
   
-  // AI Summary Card Styles
-  aiCard: {
-    marginHorizontal: 16,
-    marginBottom: 16,
-  },
-  aiHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 12,
-  },
-  aiLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#8B5CF6',
-  },
-  aiSummary: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: '#374151',
-  },
 });
 
-// Helper method for source bias colors
-const getSourceBiasColor = (bias: 'left' | 'center' | 'right'): string => {
-  switch (bias) {
-    case 'left': return '#EF4444';
-    case 'center': return '#6B7280';
-    case 'right': return '#3B82F6';
-  }
-};
 
 export default NewsDetailsScreen;
