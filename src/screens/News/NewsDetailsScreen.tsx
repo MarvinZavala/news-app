@@ -26,7 +26,6 @@ import CommunityVoting from '../../components/CommunityVoting';
 import { useAuth } from '../../context/AuthContext';
 // import Header from '../../components/ui/Header';
 import Card from '../../components/ui/Card';
-import ActionButton from '../../components/ui/ActionButton';
 // import AnimatedCard from '../../components/ui/AnimatedCard';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -185,24 +184,76 @@ const NewsDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
   // Configure navigation header
   useLayoutEffect(() => {
     navigation.setOptions({
-      title: loading ? 'Loading...' : story?.title || 'News Details',
+      // Use a shorter title or generic title for header to avoid overlap
+      title: loading ? 'Loading...' : (story ? 'News Details' : 'News Details'),
       headerRight: () => (
-        <View style={{ flexDirection: 'row', gap: 8, marginRight: 8 }}>
-          <ActionButton
-            icon={isBookmarked ? "bookmark" : "bookmark-outline"}
-            text={isBookmarked ? "Saved" : "Save"}
+        <View style={{ 
+          flexDirection: 'row', 
+          alignItems: 'center',
+          paddingRight: 16,
+          gap: 8
+        }}>
+          <TouchableOpacity
             onPress={handleBookmark}
-            loading={bookmarkLoading}
-            variant="ghost"
-            size="small"
-          />
-          <ActionButton
-            icon="share-outline"
-            text="Share"
+            disabled={bookmarkLoading}
+            style={{ 
+              width: 40,
+              height: 40,
+              justifyContent: 'center',
+              alignItems: 'center',
+              borderRadius: 20,
+              backgroundColor: 'rgba(107, 114, 128, 0.1)',
+              opacity: bookmarkLoading ? 0.5 : 1 
+            }}
+            activeOpacity={0.7}
+          >
+            {bookmarkLoading ? (
+              <ActivityIndicator size="small" color="#374151" />
+            ) : (
+              <Ionicons 
+                name={isBookmarked ? "bookmark" : "bookmark-outline"} 
+                size={20} 
+                color="#374151" 
+              />
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity
             onPress={handleShare}
-            variant="ghost"
-            size="small"
-          />
+            style={{ 
+              width: 40,
+              height: 40,
+              justifyContent: 'center',
+              alignItems: 'center',
+              borderRadius: 20,
+              backgroundColor: 'rgba(107, 114, 128, 0.1)'
+            }}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="share-outline" size={20} color="#374151" />
+          </TouchableOpacity>
+        </View>
+      ),
+      // Use custom header title component for multiline support
+      headerTitle: () => (
+        <View style={{
+          flex: 1,
+          paddingRight: 100, // Space for buttons
+          paddingLeft: 16,
+          justifyContent: 'center'
+        }}>
+          <Text 
+            style={{
+              fontSize: 16,
+              fontWeight: '600',
+              color: '#1F2937',
+              lineHeight: 20,
+              textAlign: 'left'
+            }}
+            numberOfLines={2}
+            ellipsizeMode="tail"
+          >
+            {loading ? 'Loading...' : (story?.title || 'News Details')}
+          </Text>
         </View>
       ),
     });
@@ -309,7 +360,7 @@ const NewsDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
           <Card style={styles.aiCard} padding="medium" shadow={true}>
             <View style={styles.aiHeader}>
               <Ionicons name="sparkles" size={18} color="#8B5CF6" />
-              <Text style={styles.aiLabel}>Resumen por IA</Text>
+              <Text style={styles.aiLabel}>AI Summary</Text>
             </View>
             {isSummaryLoading ? (
               <ActivityIndicator size="small" color="#8B5CF6" />
