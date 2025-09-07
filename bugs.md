@@ -9,3 +9,5 @@ npm install
 
 # 4. Iniciar el servidor limpiando el caché de Metro
 npm run web -- --clearm nb vb
+
+HF_ZERO_SHOT_URL=https://api-inference.huggingface.co/models/MoritzLaurer/DeBERTa-v3-base-mnli
