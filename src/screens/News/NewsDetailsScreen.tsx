@@ -20,6 +20,7 @@ import { NewsStory } from '../../types/news';
 import { newsService } from '../../services/NewsService';
 import { bookmarkService } from '../../services/BookmarkService';
 import { summarizationService } from '../../services/SummarizationService';
+import { biasClassificationService } from '../../services/BiasClassificationService';
 import CommentSection from '../../components/CommentSection';
 import CommunityVoting from '../../components/CommunityVoting';
 import { useAuth } from '../../context/AuthContext';
@@ -44,28 +45,38 @@ const NewsDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
   const [bookmarkLoading, setBookmarkLoading] = useState(false);
   const [summary, setSummary] = useState<string | null>(null);
   const [isSummaryLoading, setIsSummaryLoading] = useState<boolean>(false);
+  const [isBiasLoading, setIsBiasLoading] = useState<boolean>(false);
   // const [fadeAnim] = useState(new Animated.Value(0));
 
+  // Subscribe to story updates by ID for real-time data and to pick up cached AI summary
   useEffect(() => {
-    loadStory();
+    setLoading(true);
+    const unsubscribe = newsService.subscribeToNewsStory(
+      newsId,
+      (s) => {
+        setStory(s);
+        if (s?.aiSummary && !summary) {
+          setSummary(s.aiSummary);
+        }
+        setLoading(false);
+      },
+      () => setLoading(false)
+    );
+
     checkBookmarkStatus();
-    
-    // // Fade in animation
-    // Animated.timing(fadeAnim, {
-    //   toValue: 1,
-    //   duration: 300,
-    //   useNativeDriver: true,
-    // }).start();
+    return unsubscribe;
   }, [newsId]);
 
   useEffect(() => {
-    // Solo busca el resumen si tenemos una noticia y esta no tiene ya un resumen.
-    if (story && story.content && !summary) {
+    // Generar resumen solo si hay contenido y aún no hay resumen (ni local ni en Firestore)
+    if (story && story.content && !summary && !story.aiSummary && !isSummaryLoading) {
       const fetchSummary = async () => {
         setIsSummaryLoading(true);
         try {
           const generatedSummary = await summarizationService.getSummary(story.content || '', story.title);
           setSummary(generatedSummary);
+          // Cachear en Firestore para futuros accesos
+          await newsService.setAISummary(story.id, generatedSummary);
         } catch (error) {
           console.error(error);
           setSummary("Resumen no disponible en este momento.");
@@ -75,7 +86,30 @@ const NewsDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
       };
       fetchSummary();
     }
-  }, [story, summary]); // Depende de 'story' y 'summary'
+  }, [story, summary, isSummaryLoading]);
+
+  const analyzeBias = async () => {
+    if (!story || isBiasLoading) return;
+    try {
+      setIsBiasLoading(true);
+      // Prefer full content; fallback to summary; else title+summary
+      const text = story.content?.trim() || summary || `${story.title}. ${story.summary}`;
+      const result = await biasClassificationService.classify(text);
+      // Update Firestore cache and UI via subscription
+      await newsService.setAIBiasResult(story.id, {
+        left: result.left,
+        center: result.center,
+        right: result.right,
+        detectedBias: result.detectedBias,
+        confidence: result.confidence,
+      });
+    } catch (e) {
+      console.error('Bias analysis error:', e);
+      Alert.alert('Bias Analysis', 'No se pudo calcular el sesgo en este momento.');
+    } finally {
+      setIsBiasLoading(false);
+    }
+  };
 
   const checkBookmarkStatus = async () => {
     if (!user) return;
@@ -88,19 +122,7 @@ const NewsDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
     }
   };
 
-  const loadStory = async () => {
-    try {
-      setLoading(true);
-      // Get all stories and find the one with matching ID
-      const stories = await newsService.searchNews('', {});
-      const foundStory = stories.find(s => s.id === newsId);
-      setStory(foundStory || null);
-    } catch (error) {
-      console.error('Error loading story:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // loadStory ya no se usa; migrado a suscripción en tiempo real
 
   const formatTimeAgo = (date: Date): string => {
     const now = new Date();
@@ -448,16 +470,80 @@ const NewsDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
           </Card>
         )}
         
-        {/* AI Summary */}
-        {story.aiSummary && (
+        {/* AI Summary */
+        }
+        {(isSummaryLoading || summary || story.aiSummary) && (
           <Card style={styles.aiCard} padding="medium" shadow={true}>
             <View style={styles.aiHeader}>
               <Ionicons name="sparkles" size={18} color="#8B5CF6" />
               <Text style={styles.aiLabel}>AI Analysis</Text>
             </View>
-            <Text style={styles.aiSummary}>{story.aiSummary}</Text>
+            {isSummaryLoading ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 }}>
+                <ActivityIndicator size="small" color="#8B5CF6" />
+                <Text style={styles.aiSummary}>Generating summary...</Text>
+              </View>
+            ) : (
+              <Text style={styles.aiSummary}>{summary || story.aiSummary}</Text>
+            )}
           </Card>
         )}
+
+        {/* AI Bias */}
+        <Card style={styles.aiCard} padding="medium" shadow={true}>
+          <View style={[styles.aiHeader, { justifyContent: 'space-between' }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Ionicons name="analytics-outline" size={18} color="#2563EB" />
+              <Text style={[styles.aiLabel, { color: '#2563EB' }]}>AI Bias</Text>
+            </View>
+            <TouchableOpacity
+              onPress={analyzeBias}
+              disabled={isBiasLoading}
+              style={{
+                flexDirection: 'row', alignItems: 'center', gap: 6,
+                backgroundColor: isBiasLoading ? '#BFDBFE' : '#3B82F6',
+                paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8,
+                opacity: isBiasLoading ? 0.7 : 1,
+              }}
+              activeOpacity={0.8}
+            >
+              {isBiasLoading ? (
+                <ActivityIndicator size="small" color="#0F172A" />
+              ) : (
+                <Ionicons name="scan-outline" size={16} color="#FFFFFF" />
+              )}
+              <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>
+                {story.aiBiasGeneratedAt ? 'Recalculate' : 'Analyze Bias'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {story.aiDetectedBias && (
+            <View style={{ marginTop: 8 }}>
+              <Text style={styles.aiSummary}>Detected: {story.aiDetectedBias.toUpperCase()} {typeof story.aiBiasConfidence === 'number' ? `(${Math.round((story.aiBiasConfidence || 0) * 100)}%)` : ''}</Text>
+            </View>
+          )}
+
+          {(story.biasScore) && (
+            <View style={{ marginTop: 12, gap: 8 }}>
+              {([
+                { label: 'Left', color: '#EF4444', value: story.biasScore.left },
+                { label: 'Center', color: '#6B7280', value: story.biasScore.center },
+                { label: 'Right', color: '#3B82F6', value: story.biasScore.right },
+              ] as const).map((b) => (
+                <View key={b.label}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                    <Text style={{ color: '#374151', fontWeight: '600' }}>{b.label}</Text>
+                    <Text style={{ color: '#374151', fontWeight: '600' }}>{b.value}%</Text>
+                  </View>
+                  <View style={{ height: 8, backgroundColor: '#E5E7EB', borderRadius: 4, overflow: 'hidden' }}>
+                    <View style={{ width: `${Math.max(0, Math.min(100, b.value))}%`, height: '100%', backgroundColor: b.color }} />
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+        </Card>
         
         {/* Sources */}
         <Card style={styles.sourcesCard} padding="medium" shadow={true}>

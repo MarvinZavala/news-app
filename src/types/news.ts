@@ -107,6 +107,8 @@ export interface NewsStory {
   aiSummary?: string;
   aiCredibilityScore?: number; // 0-1
   aiDetectedBias?: 'left' | 'center' | 'right';
+  aiBiasConfidence?: number; // 0-1, max score from zero-shot
+  aiBiasGeneratedAt?: Date; // when AI bias was computed
   
   // Enhanced metadata (from new submission system)
   isBreaking: boolean;

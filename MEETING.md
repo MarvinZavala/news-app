@@ -1,14 +1,11 @@
 # Backend Architecture Overview: News App
 
-## Our Philosophy: A Modern, Efficient Backend
-
 Our backend architecture avoids the traditional, monolithic server model. Instead, we've embraced a **"Serverless-First"** approach, combining a powerful Backend-as-a-Service (BaaS) with specialized AI microservices via APIs.
 
 The result is a robust, scalable, and low-maintenance system, perfectly suited for rapid development and future growth. It's built on three key components.
 
----
 
-### 1. The Foundation: Firebase (BaaS)
+1. The Foundation: Firebase (BaaS)
 
 Firebase is the heart of our backend. We focus on the application logic, while Firebase handles the heavy lifting of infrastructure.
 

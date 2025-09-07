@@ -423,6 +423,20 @@ export class NewsService {
       return [];
     }
   }
+
+  // Cache AI summary into Firestore to avoid repeated API calls
+  async setAISummary(newsId: string, summary: string): Promise<void> {
+    try {
+      const docRef = doc(this.newsCollection, newsId);
+      await updateDoc(docRef, {
+        aiSummary: summary,
+        updatedAt: serverTimestamp(),
+      });
+    } catch (error) {
+      console.error('Error caching AI summary:', error);
+      // Do not throw; failure to cache should not break UI
+    }
+  }
   
   // Get user-generated content stats
   async getUserSubmissionStats(userId: string): Promise<{
@@ -513,6 +527,30 @@ export class NewsService {
     } catch (error) {
       console.error('Error searching news:', error);
       return [];
+    }
+  }
+
+  // Cache AI bias result (percentages and detected class)
+  async setAIBiasResult(newsId: string, result: { 
+    left: number; center: number; right: number; 
+    detectedBias: 'left' | 'center' | 'right'; 
+    confidence?: number; 
+  }): Promise<void> {
+    try {
+      const docRef = doc(this.newsCollection, newsId);
+      await updateDoc(docRef, {
+        biasScore: {
+          left: result.left,
+          center: result.center,
+          right: result.right,
+        },
+        aiDetectedBias: result.detectedBias,
+        aiBiasConfidence: typeof result.confidence === 'number' ? result.confidence : null,
+        aiBiasGeneratedAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+    } catch (error) {
+      console.error('Error caching AI bias result:', error);
     }
   }
   

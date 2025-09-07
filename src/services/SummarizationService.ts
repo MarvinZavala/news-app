@@ -10,31 +10,40 @@ class SummarizationService {
       }
 
       // Preparar texto para Hugging Face API - optimizado para resumir puntos clave
-      const promptPrefix = 'Key points to summarize: ';
+      const promptPrefix = 'Summarize the following news content: ';
       const titlePrefix = title ? `${title}. ` : '';
       const fullText = promptPrefix + titlePrefix + articleText;
-      const truncatedText = fullText.substring(0, 1024);
+      // BART maneja ~1024 tokens de entrada; usamos ~3000 chars como heurística conservadora
+      const truncatedText = fullText.length > 3000 ? fullText.slice(0, 3000) : fullText;
       
-      const response = await fetch(HF_API_URL, {
-        method: 'POST',
-        headers: { 
-          'Authorization': `Bearer ${HF_API_TOKEN}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          inputs: truncatedText,
-          parameters: {
-            max_length: 80,     // Más corto para forzar síntesis
-            min_length: 25,     // Mínimo para evitar muy corto
-            do_sample: true,    // Activar sampling para creatividad
-            temperature: 0.8,   // Creatividad moderada para parafrasear
-            top_k: 50,         // Limitar opciones para coherencia
-            repetition_penalty: 1.3, // Penalizar repetición de texto original
-            length_penalty: 2.0,     // Favorecer resúmenes concisos
-            no_repeat_ngram_size: 3  // Evitar copiar frases del original
-          }
+      // Pequeño helper de reintento para cold start (503/model loading)
+      const callApi = async (): Promise<Response> => {
+        return fetch(HF_API_URL, {
+          method: 'POST',
+          headers: { 
+            'Authorization': `Bearer ${HF_API_TOKEN}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            inputs: truncatedText,
+            parameters: {
+            max_length: 130,
+            min_length: 50,
+            do_sample: false,
+            length_penalty: 2.0,
+            no_repeat_ngram_size: 3
+            }
         }),
       });
+      };
+
+      let response = await callApi();
+      // Manejar cold starts: algunos endpoints devuelven 503 con mensaje de loading
+      if (!response.ok && (response.status === 503 || response.status === 524)) {
+        // Esperar y reintentar una vez
+        await new Promise((res) => setTimeout(res, 2000));
+        response = await callApi();
+      }
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -51,6 +60,24 @@ class SummarizationService {
       }
 
       const data = await response.json();
+
+      // Algunos errores vienen como objeto con propiedad 'error'
+      if (data && data.error) {
+        const errMsg = String(data.error).toLowerCase();
+        if (errMsg.includes('loading')) {
+          // Un intento extra si el modelo estaba cargando
+          await new Promise((res) => setTimeout(res, 1500));
+          const retry = await callApi();
+          if (!retry.ok) {
+            throw new Error('Hugging Face model still loading. Please try again.');
+          }
+          const retryData = await retry.json();
+          if (retryData && retryData[0]?.summary_text) {
+            return retryData[0].summary_text as string;
+          }
+        }
+        throw new Error(data.error);
+      }
       
       // Hugging Face devuelve un array con el resultado
       if (data && data[0] && data[0].summary_text) {
