@@ -201,18 +201,6 @@ const NewsCard: React.FC<Props> = ({ story, onPress, onBookmark, onShare }) => {
         </View>
       )}
 
-      {/* AI Summary (if available) */}
-      {story.aiSummary && (
-        <View style={styles.aiSummaryContainer}>
-          <View style={styles.aiHeader}>
-            <Ionicons name="sparkles" size={12} color="#9B59B6" />
-            <Text style={styles.aiLabel}>AI Analysis</Text>
-          </View>
-          <Text style={styles.aiSummary} numberOfLines={2}>
-            {story.aiSummary}
-          </Text>
-        </View>
-      )}
 
       {/* Bias Visualization - Only show if biasScore exists */}
       {story.biasScore && (
@@ -534,29 +522,6 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
 
-  // AI Summary styles
-  aiSummaryContainer: {
-    backgroundColor: '#F8F5FF',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
-  },
-  aiHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  aiLabel: {
-    fontSize: 11,
-    fontWeight: 'bold',
-    color: '#9B59B6',
-    marginLeft: 4,
-  },
-  aiSummary: {
-    fontSize: 12,
-    color: '#7D4CDB',
-    lineHeight: 16,
-  },
 
   // Bias visualization styles
   biasSection: {

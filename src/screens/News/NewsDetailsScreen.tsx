@@ -102,6 +102,9 @@ const NewsDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
         right: result.right,
         detectedBias: result.detectedBias,
         confidence: result.confidence,
+        justification: result.justification,
+        aligned_elements: result.aligned_elements,
+        provider: result.provider,
       });
     } catch (e) {
       console.error('Bias analysis error:', e);
@@ -469,25 +472,6 @@ const NewsDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
             )}
           </Card>
         )}
-        
-        {/* AI Summary */
-        }
-        {(isSummaryLoading || summary || story.aiSummary) && (
-          <Card style={styles.aiCard} padding="medium" shadow={true}>
-            <View style={styles.aiHeader}>
-              <Ionicons name="sparkles" size={18} color="#8B5CF6" />
-              <Text style={styles.aiLabel}>AI Analysis</Text>
-            </View>
-            {isSummaryLoading ? (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 }}>
-                <ActivityIndicator size="small" color="#8B5CF6" />
-                <Text style={styles.aiSummary}>Generating summary...</Text>
-              </View>
-            ) : (
-              <Text style={styles.aiSummary}>{summary || story.aiSummary}</Text>
-            )}
-          </Card>
-        )}
 
         {/* AI Bias */}
         <Card style={styles.aiCard} padding="medium" shadow={true}>
@@ -518,29 +502,104 @@ const NewsDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
             </TouchableOpacity>
           </View>
 
-          {story.aiDetectedBias && (
-            <View style={{ marginTop: 8 }}>
-              <Text style={styles.aiSummary}>Detected: {story.aiDetectedBias.toUpperCase()} {typeof story.aiBiasConfidence === 'number' ? `(${Math.round((story.aiBiasConfidence || 0) * 100)}%)` : ''}</Text>
+          {/* When loading, show a clear calculating state and hide previous placeholder */}
+          {isBiasLoading && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 }}>
+              <ActivityIndicator size="small" color="#2563EB" />
+              <Text style={styles.aiSummary}>Calculating bias…</Text>
             </View>
           )}
 
-          {(story.biasScore) && (
-            <View style={{ marginTop: 12, gap: 8 }}>
-              {([
-                { label: 'Left', color: '#EF4444', value: story.biasScore.left },
-                { label: 'Center', color: '#6B7280', value: story.biasScore.center },
-                { label: 'Right', color: '#3B82F6', value: story.biasScore.right },
-              ] as const).map((b) => (
-                <View key={b.label}>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                    <Text style={{ color: '#374151', fontWeight: '600' }}>{b.label}</Text>
-                    <Text style={{ color: '#374151', fontWeight: '600' }}>{b.value}%</Text>
+          {/* After analysis is saved (has timestamp), show detected and bars */}
+          {!isBiasLoading && story.aiBiasGeneratedAt && (
+            <>
+              {/* Analysis Header with Provider Info */}
+              <View style={{ marginTop: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <View>
+                  {story.aiDetectedBias && (
+                    <>
+                      <Text style={[styles.aiSummary, { fontWeight: '600', color: '#374151' }]}>
+                        Detected: {story.aiDetectedBias.toUpperCase()}
+                        {story.biasScore && ` (${
+                          story.aiDetectedBias === 'left' ? story.biasScore.left :
+                          story.aiDetectedBias === 'center' ? story.biasScore.center :
+                          story.aiDetectedBias === 'right' ? story.biasScore.right : 0
+                        }%)`}
+                      </Text>
+                      {typeof story.aiBiasConfidence === 'number' && (
+                        <Text style={[styles.aiSummary, { fontSize: 11, color: '#6B7280', marginTop: 2 }]}>
+                          Confidence: {Math.round((story.aiBiasConfidence || 0) * 100)}%
+                        </Text>
+                      )}
+                    </>
+                  )}
+                </View>
+                {story.aiBiasProvider && (
+                  <View style={{ backgroundColor: '#F3F4F6', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                    <Text style={{ fontSize: 10, fontWeight: '600', color: '#6B7280', textTransform: 'uppercase' }}>
+                      {story.aiBiasProvider}
+                    </Text>
                   </View>
-                  <View style={{ height: 8, backgroundColor: '#E5E7EB', borderRadius: 4, overflow: 'hidden' }}>
-                    <View style={{ width: `${Math.max(0, Math.min(100, b.value))}%`, height: '100%', backgroundColor: b.color }} />
+                )}
+              </View>
+
+              {/* Enhanced Justification */}
+              {story.aiBiasJustification && (
+                <View style={{ marginTop: 12, backgroundColor: '#F8FAFC', padding: 12, borderRadius: 8, borderLeftWidth: 3, borderLeftColor: '#2563EB' }}>
+                  <Text style={{ fontSize: 13, color: '#475569', lineHeight: 20, fontStyle: 'italic' }}>
+                    {story.aiBiasJustification}
+                  </Text>
+                </View>
+              )}
+
+              {/* Aligned Elements Tags */}
+              {story.aiBiasAlignedElements && story.aiBiasAlignedElements.length > 0 && (
+                <View style={{ marginTop: 12 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '600', color: '#6B7280', marginBottom: 8 }}>
+                    Detected Elements:
+                  </Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                    {story.aiBiasAlignedElements.map((element, index) => (
+                      <View key={index} style={{ backgroundColor: '#DBEAFE', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 }}>
+                        <Text style={{ fontSize: 11, color: '#1D4ED8', fontWeight: '500' }}>
+                          {element}
+                        </Text>
+                      </View>
+                    ))}
                   </View>
                 </View>
-              ))}
+              )}
+
+              {/* Bias Distribution Bars */}
+              {(story.biasScore) && (
+                <View style={{ marginTop: 16, gap: 8 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '600', color: '#6B7280', marginBottom: 4 }}>
+                    Bias Distribution:
+                  </Text>
+                  {([
+                    { label: 'Left', color: '#EF4444', value: story.biasScore.left },
+                    { label: 'Center', color: '#6B7280', value: story.biasScore.center },
+                    { label: 'Right', color: '#3B82F6', value: story.biasScore.right },
+                  ] as const).map((b) => (
+                    <View key={b.label}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                        <Text style={{ color: '#374151', fontWeight: '600', fontSize: 13 }}>{b.label}</Text>
+                        <Text style={{ color: '#374151', fontWeight: '600', fontSize: 13 }}>{b.value}%</Text>
+                      </View>
+                      <View style={{ height: 8, backgroundColor: '#E5E7EB', borderRadius: 4, overflow: 'hidden' }}>
+                        <View style={{ width: `${Math.max(0, Math.min(100, b.value))}%`, height: '100%', backgroundColor: b.color }} />
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </>
+          )}
+
+          {/* If never analyzed and not loading, show a friendly hint instead of placeholder bars */}
+          {!isBiasLoading && !story.aiBiasGeneratedAt && (
+            <View style={{ marginTop: 8 }}>
+              <Text style={styles.aiSummary}>No bias calculated yet. Tap “Analyze Bias”.</Text>
             </View>
           )}
         </Card>

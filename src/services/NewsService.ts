@@ -531,10 +531,13 @@ export class NewsService {
   }
 
   // Cache AI bias result (percentages and detected class)
-  async setAIBiasResult(newsId: string, result: { 
-    left: number; center: number; right: number; 
-    detectedBias: 'left' | 'center' | 'right'; 
-    confidence?: number; 
+  async setAIBiasResult(newsId: string, result: {
+    left: number; center: number; right: number;
+    detectedBias: 'left' | 'center' | 'right';
+    confidence?: number;
+    justification?: string;
+    aligned_elements?: string[];
+    provider?: string;
   }): Promise<void> {
     try {
       const docRef = doc(this.newsCollection, newsId);
@@ -546,6 +549,9 @@ export class NewsService {
         },
         aiDetectedBias: result.detectedBias,
         aiBiasConfidence: typeof result.confidence === 'number' ? result.confidence : null,
+        aiBiasJustification: result.justification || null,
+        aiBiasAlignedElements: result.aligned_elements || null,
+        aiBiasProvider: result.provider || null,
         aiBiasGeneratedAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });

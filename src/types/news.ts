@@ -107,8 +107,12 @@ export interface NewsStory {
   aiSummary?: string;
   aiCredibilityScore?: number; // 0-1
   aiDetectedBias?: 'left' | 'center' | 'right';
-  aiBiasConfidence?: number; // 0-1, max score from zero-shot
+  aiBiasConfidence?: number; // 0-1, confidence score from Claude
   aiBiasGeneratedAt?: Date; // when AI bias was computed
+  // Enhanced AI fields
+  aiBiasJustification?: string; // Detailed explanation of bias detection
+  aiBiasAlignedElements?: string[]; // Specific elements that indicate bias
+  aiBiasProvider?: string; // 'anthropic' (Claude Haiku)
   
   // Enhanced metadata (from new submission system)
   isBreaking: boolean;
