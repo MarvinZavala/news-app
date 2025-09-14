@@ -99,6 +99,11 @@ const SubmitNewsScreen: React.FC<Props> = ({ navigation }) => {
     }
   };
 
+  // Helper to count characters without spaces
+  const getCharCountWithoutSpaces = (text: string): number => {
+    return text.replace(/\s/g, '').length;
+  };
+
   // Media picker permissions
   const ensureLibraryPermission = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -294,6 +299,11 @@ const SubmitNewsScreen: React.FC<Props> = ({ navigation }) => {
       return;
     }
 
+    if (getCharCountWithoutSpaces(formData.title) > 200) {
+      Alert.alert('Error', 'Title must be less than 200 characters (excluding spaces)');
+      return;
+    }
+
     // Validate primary URL only if provided
     if (formData.primaryUrl && formData.primaryUrl.trim() && !isValidUrl(formData.primaryUrl)) {
       Alert.alert('Error', 'Please enter a valid URL (e.g., https://example.com)');
@@ -313,13 +323,15 @@ const SubmitNewsScreen: React.FC<Props> = ({ navigation }) => {
       return;
     }
 
-    if (formData.summary.length < 50) {
-      Alert.alert('Error', 'Summary must be at least 50 characters long');
+    const summaryCharCount = getCharCountWithoutSpaces(formData.summary);
+
+    if (summaryCharCount < 50) {
+      Alert.alert('Error', 'Summary must be at least 50 characters long (excluding spaces)');
       return;
     }
 
-    if (formData.summary.length > 2000) {
-      Alert.alert('Error', 'Summary must be less than 2000 characters');
+    if (summaryCharCount > 2500) {
+      Alert.alert('Error', 'Summary must be less than 2500 characters (excluding spaces)');
       return;
     }
 
@@ -488,10 +500,10 @@ const SubmitNewsScreen: React.FC<Props> = ({ navigation }) => {
               placeholder="Enter news headline..."
               value={formData.title}
               onChangeText={(text) => updateFormData('title', text)}
-              maxLength={200}
+              maxLength={300}
             />
             <Text style={styles.charCount}>
-              {formData.title.length}/200
+              {getCharCountWithoutSpaces(formData.title)}/200 (no spaces)
             </Text>
           </View>
 
@@ -534,19 +546,19 @@ const SubmitNewsScreen: React.FC<Props> = ({ navigation }) => {
             </Text>
             <TextInput
               style={[styles.input, styles.textArea]}
-              placeholder="Write a clear, objective summary of the news article... (50-2000 characters)"
+              placeholder="Write a clear, objective summary of the news article... (50-2500 characters, spaces not counted)"
               value={formData.summary}
               onChangeText={(text) => updateFormData('summary', text)}
               multiline
               numberOfLines={6}
-              maxLength={2000}
+              maxLength={3000}
               textAlignVertical="top"
             />
             <Text style={[
               styles.charCount,
-              formData.summary.length < 50 && styles.charCountWarning
+              getCharCountWithoutSpaces(formData.summary) < 50 && styles.charCountWarning
             ]}>
-              {formData.summary.length}/2000 {formData.summary.length < 50 && '(min 50)'}
+              {getCharCountWithoutSpaces(formData.summary)}/2000 (no spaces) {getCharCountWithoutSpaces(formData.summary) < 50 && '(min 50)'}
             </Text>
           </View>
           
