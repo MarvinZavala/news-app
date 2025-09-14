@@ -318,8 +318,8 @@ const SubmitNewsScreen: React.FC<Props> = ({ navigation }) => {
       return;
     }
 
-    if (formData.summary.length > 1000) {
-      Alert.alert('Error', 'Summary must be less than 1000 characters');
+    if (formData.summary.length > 2000) {
+      Alert.alert('Error', 'Summary must be less than 2000 characters');
       return;
     }
 
@@ -534,19 +534,19 @@ const SubmitNewsScreen: React.FC<Props> = ({ navigation }) => {
             </Text>
             <TextInput
               style={[styles.input, styles.textArea]}
-              placeholder="Write a clear, objective summary of the news article... (50-1000 characters)"
+              placeholder="Write a clear, objective summary of the news article... (50-2000 characters)"
               value={formData.summary}
               onChangeText={(text) => updateFormData('summary', text)}
               multiline
-              numberOfLines={4}
-              maxLength={1000}
+              numberOfLines={6}
+              maxLength={2000}
               textAlignVertical="top"
             />
             <Text style={[
               styles.charCount,
               formData.summary.length < 50 && styles.charCountWarning
             ]}>
-              {formData.summary.length}/1000 {formData.summary.length < 50 && '(min 50)'}
+              {formData.summary.length}/2000 {formData.summary.length < 50 && '(min 50)'}
             </Text>
           </View>
           
@@ -997,7 +997,7 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   textArea: {
-    minHeight: 100,
+    minHeight: 120,
     paddingTop: 14,
   },
   hint: {
