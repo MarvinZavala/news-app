@@ -551,14 +551,14 @@ const SubmitNewsScreen: React.FC<Props> = ({ navigation }) => {
               onChangeText={(text) => updateFormData('summary', text)}
               multiline
               numberOfLines={6}
-              maxLength={3000}
+              maxLength={4000}
               textAlignVertical="top"
             />
             <Text style={[
               styles.charCount,
               getCharCountWithoutSpaces(formData.summary) < 50 && styles.charCountWarning
             ]}>
-              {getCharCountWithoutSpaces(formData.summary)}/2000 (no spaces) {getCharCountWithoutSpaces(formData.summary) < 50 && '(min 50)'}
+              {getCharCountWithoutSpaces(formData.summary)}/2500 (no spaces) {getCharCountWithoutSpaces(formData.summary) < 50 && '(min 50)'}
             </Text>
           </View>
           
