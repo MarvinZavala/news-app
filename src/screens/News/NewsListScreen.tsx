@@ -27,6 +27,25 @@ interface Props {
   navigation: NewsListScreenNavigationProp;
 }
 
+// Categories available for filtering
+const CATEGORIES = [
+  'All',
+  'Politics',
+  'International',
+  'Business',
+  'Technology',
+  'Science',
+  'Health',
+  'Environment',
+  'Sports',
+  'Entertainment',
+  'Education',
+  'Local',
+  'Crime',
+  'Weather',
+  'Other'
+];
+
 const NewsListScreen: React.FC<Props> = ({ navigation }) => {
   const { user } = useAuth();
   const [stories, setStories] = useState<NewsStory[]>([]);
@@ -130,6 +149,12 @@ const NewsListScreen: React.FC<Props> = ({ navigation }) => {
     setFilters({ ...filters, ...newFilters });
   };
 
+  // Category filter handler
+  const handleCategoryChange = (category: string) => {
+    const categoryFilter = category === 'All' ? undefined : category;
+    handleFilterChange({ category: categoryFilter });
+  };
+
   const renderNewsItem = ({ item }: { item: NewsStory }) => (
     <NewsCard
       story={item}
@@ -137,6 +162,34 @@ const NewsListScreen: React.FC<Props> = ({ navigation }) => {
       onBookmark={handleBookmark}
       onShare={handleShare}
     />
+  );
+
+  // Render filter button component
+  const renderFilterButton = (
+    title: string,
+    isActive: boolean,
+    onPress: () => void,
+    icon?: React.ReactNode,
+    buttonStyle?: any,
+    activeStyle?: any,
+    textStyle?: any,
+    activeTextStyle?: any
+  ) => (
+    <TouchableOpacity
+      style={[
+        buttonStyle || styles.headerButton,
+        isActive && (activeStyle || styles.headerButtonActive)
+      ]}
+      onPress={onPress}
+    >
+      {icon}
+      <Text style={[
+        textStyle || styles.headerButtonText,
+        isActive && (activeTextStyle || styles.headerButtonTextActive)
+      ]}>
+        {title}
+      </Text>
+    </TouchableOpacity>
   );
 
   // Loading state
@@ -184,83 +237,88 @@ const NewsListScreen: React.FC<Props> = ({ navigation }) => {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Latest News</Text>
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.headerActions}
-        >
-          <TouchableOpacity
-            style={[
-              styles.headerButton,
-              filters.sortBy === 'newest' && styles.headerButtonActive
-            ]}
-            onPress={() => handleFilterChange({ sortBy: 'newest' })}
+
+        {/* Categories Filter Row */}
+        <View style={styles.filterSection}>
+          <Text style={styles.filterLabel}>Categories</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.headerActions}
           >
-            <Ionicons 
-              name="time-outline" 
-              size={16} 
-              color={filters.sortBy === 'newest' ? '#fff' : '#1DA1F2'} 
-            />
-            <Text style={[
-              styles.headerButtonText,
-              filters.sortBy === 'newest' && styles.headerButtonTextActive
-            ]}>Latest</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={[
-              styles.headerButton,
-              filters.sortBy === 'trending' && styles.headerButtonActive
-            ]}
-            onPress={() => handleFilterChange({ sortBy: 'trending' })}
+            {CATEGORIES.map((category) => {
+              const isActive = (category === 'All' && !filters.category) || filters.category === category;
+              return (
+                <View key={category}>
+                  {renderFilterButton(
+                    category,
+                    isActive,
+                    () => handleCategoryChange(category),
+                    undefined,
+                    styles.categoryButton,
+                    styles.categoryButtonActive,
+                    styles.categoryButtonText,
+                    styles.categoryButtonTextActive
+                  )}
+                </View>
+              );
+            })}
+          </ScrollView>
+        </View>
+
+        {/* Sort By Filter Row */}
+        <View style={styles.filterSection}>
+          <Text style={styles.filterLabel}>Sort By</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.headerActions}
           >
-            <Ionicons 
-              name="trending-up" 
-              size={16} 
-              color={filters.sortBy === 'trending' ? '#fff' : '#1DA1F2'} 
-            />
-            <Text style={[
-              styles.headerButtonText,
-              filters.sortBy === 'trending' && styles.headerButtonTextActive
-            ]}>Trending</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={[
-              styles.headerButton,
-              filters.sortBy === 'mostVoted' && styles.headerButtonActive
-            ]}
-            onPress={() => handleFilterChange({ sortBy: 'mostVoted' })}
-          >
-            <Ionicons 
-              name="people-outline" 
-              size={16} 
-              color={filters.sortBy === 'mostVoted' ? '#fff' : '#1DA1F2'} 
-            />
-            <Text style={[
-              styles.headerButtonText,
-              filters.sortBy === 'mostVoted' && styles.headerButtonTextActive
-            ]}>Popular</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={[
-              styles.headerButton,
-              filters.sortBy === 'underTheRadar' && styles.headerButtonActive
-            ]}
-            onPress={() => handleFilterChange({ sortBy: 'underTheRadar' })}
-          >
-            <MaterialIcons 
-              name="radar" 
-              size={16} 
-              color={filters.sortBy === 'underTheRadar' ? '#fff' : '#1DA1F2'} 
-            />
-            <Text style={[
-              styles.headerButtonText,
-              filters.sortBy === 'underTheRadar' && styles.headerButtonTextActive
-            ]}>Under-the-Radar</Text>
-          </TouchableOpacity>
-        </ScrollView>
+            {renderFilterButton(
+              'Latest',
+              filters.sortBy === 'newest',
+              () => handleFilterChange({ sortBy: 'newest' }),
+              <Ionicons
+                name="time-outline"
+                size={16}
+                color={filters.sortBy === 'newest' ? '#fff' : '#1DA1F2'}
+              />
+            )}
+
+            {renderFilterButton(
+              'Trending',
+              filters.sortBy === 'trending',
+              () => handleFilterChange({ sortBy: 'trending' }),
+              <Ionicons
+                name="trending-up"
+                size={16}
+                color={filters.sortBy === 'trending' ? '#fff' : '#1DA1F2'}
+              />
+            )}
+
+            {renderFilterButton(
+              'Popular',
+              filters.sortBy === 'mostVoted',
+              () => handleFilterChange({ sortBy: 'mostVoted' }),
+              <Ionicons
+                name="people-outline"
+                size={16}
+                color={filters.sortBy === 'mostVoted' ? '#fff' : '#1DA1F2'}
+              />
+            )}
+
+            {renderFilterButton(
+              'Under-the-Radar',
+              filters.sortBy === 'underTheRadar',
+              () => handleFilterChange({ sortBy: 'underTheRadar' }),
+              <MaterialIcons
+                name="radar"
+                size={16}
+                color={filters.sortBy === 'underTheRadar' ? '#fff' : '#1DA1F2'}
+              />
+            )}
+          </ScrollView>
+        </View>
       </View>
 
       <FlatList
@@ -330,6 +388,45 @@ const styles = StyleSheet.create({
   headerButtonTextActive: {
     color: '#fff',
   },
+
+  // Filter sections
+  filterSection: {
+    marginBottom: 12,
+  },
+  filterLabel: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '600',
+    marginBottom: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+
+  // Category-specific styles
+  categoryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  categoryButtonActive: {
+    backgroundColor: '#475569',
+    borderColor: '#475569',
+  },
+  categoryButtonText: {
+    fontSize: 11,
+    color: '#475569',
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  categoryButtonTextActive: {
+    color: '#fff',
+  },
+
   listContainer: {
     paddingVertical: 8,
   },

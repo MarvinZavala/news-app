@@ -72,6 +72,10 @@ export class NewsService {
           // Stories with high engagement but mixed bias scores
           q = query(q, orderBy('totalVotes', 'desc'));
           break;
+        case 'underTheRadar':
+          // Stories with low view count but recent
+          q = query(q, orderBy('viewCount', 'asc'), orderBy('createdAt', 'desc'));
+          break;
         default:
           q = query(q, orderBy('createdAt', 'desc'));
       }

@@ -210,7 +210,7 @@ export interface NewsFilters {
   category?: string;
   bias?: 'left' | 'center' | 'right';
   timeRange?: 'hour' | 'day' | 'week' | 'month';
-  sortBy?: 'newest' | 'trending' | 'mostVoted' | 'controversial';
+  sortBy?: 'newest' | 'trending' | 'mostVoted' | 'controversial' | 'underTheRadar';
   minCredibility?: number;
   sourceReputation?: 'verified' | 'questionable' | 'unknown';
   urgencyLevel?: 'normal' | 'breaking' | 'developing';
