@@ -626,6 +626,87 @@ export class NewsService {
     
     return biasScore;
   }
+
+  // Get user's submitted news stories
+  async getUserSubmittedNews(userId: string): Promise<NewsStory[]> {
+    try {
+      const q = query(
+        this.newsCollection,
+        where('submittedBy', '==', userId),
+        where('isUserGenerated', '==', true),
+        orderBy('createdAt', 'desc')
+      );
+
+      const snapshot = await getDocs(q);
+      const stories: NewsStory[] = [];
+
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        stories.push({
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt?.toDate() || new Date(),
+          updatedAt: data.updatedAt?.toDate() || new Date(),
+          sources: data.sources?.map((source: any) => ({
+            ...source,
+            publishedAt: source.publishedAt?.toDate() || new Date()
+          })) || [],
+          userVotes: data.userVotes?.map((vote: any) => ({
+            ...vote,
+            votedAt: vote.votedAt?.toDate() || new Date()
+          })) || []
+        } as NewsStory);
+      });
+
+      return stories;
+    } catch (error) {
+      console.error('Error getting user submitted news:', error);
+      throw error;
+    }
+  }
+
+  // Delete user's news story with media cleanup
+  async deleteUserNews(newsId: string, userId: string): Promise<void> {
+    try {
+      console.log(`🗑️ Deleting news story ${newsId} by user ${userId}`);
+
+      // First, get the news story to verify ownership and get media info
+      const newsDoc = doc(this.newsCollection, newsId);
+      const newsSnapshot = await getDocs(query(
+        this.newsCollection,
+        where('__name__', '==', newsId),
+        where('submittedBy', '==', userId),
+        where('isUserGenerated', '==', true)
+      ));
+
+      if (newsSnapshot.empty) {
+        throw new Error('News story not found or you do not have permission to delete it');
+      }
+
+      const newsData = newsSnapshot.docs[0].data();
+
+      // Delete associated media files if any
+      if (newsData.media && (newsData.media.photos?.length > 0 || newsData.media.videos?.length > 0)) {
+        console.log('🗑️ Cleaning up associated media files...');
+        const allMediaFiles = [
+          ...(newsData.media.photos || []),
+          ...(newsData.media.videos || [])
+        ];
+
+        if (allMediaFiles.length > 0) {
+          await mediaService.deleteMediaFiles(allMediaFiles);
+        }
+      }
+
+      // Delete the news document
+      await deleteDoc(newsDoc);
+
+      console.log('✅ News story and associated media deleted successfully');
+    } catch (error) {
+      console.error('❌ Error deleting user news:', error);
+      throw error;
+    }
+  }
 }
 
 // Export singleton instance

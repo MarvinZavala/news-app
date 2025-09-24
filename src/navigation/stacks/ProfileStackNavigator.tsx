@@ -4,6 +4,7 @@ import { ProfileStackParamList } from '../../types/navigation';
 
 // Screens
 import ProfileScreen from '../../screens/Profile/ProfileScreen';
+import UserNewsManagerScreen from '../../screens/Profile/UserNewsManagerScreen';
 import SettingsScreen from '../../screens/Profile/SettingsScreen';
 import EditProfileScreen from '../../screens/Profile/EditProfileScreen';
 import NotificationsScreen from '../../screens/Profile/NotificationsScreen';
@@ -28,11 +29,19 @@ export const ProfileStackNavigator = () => {
         },
       }}
     >
-      <Stack.Screen 
-        name="ProfileScreen" 
+      <Stack.Screen
+        name="ProfileScreen"
         component={ProfileScreen}
-        options={{ 
+        options={{
           headerShown: false // Profile screen handles its own header
+        }}
+      />
+      <Stack.Screen
+        name="UserNewsManager"
+        component={UserNewsManagerScreen}
+        options={{
+          headerShown: false, // UserNewsManager handles its own header
+          headerBackTitleVisible: false,
         }}
       />
       <Stack.Screen 

@@ -1,0 +1,301 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isTimestamp(value) {
+      return value is timestamp;
+    }
+
+    function isNonEmptyString(value) {
+      return value is string && value.size() > 0;
+    }
+
+    function nonNegativeNumber(value) {
+      return (value is int || value is float) && value >= 0;
+    }
+
+    function newsProtectedFieldsUnchanged() {
+      return request.resource.data.createdAt == resource.data.createdAt &&
+             request.resource.data.isUserGenerated == resource.data.isUserGenerated &&
+             request.resource.data.submittedBy == resource.data.submittedBy;
+    }
+
+    function ownerEditableNewsKeys() {
+      return [
+        'title','summary','content','category','media','sources',
+        'biasScore','totalSources','userVotes','tags','urgencyLevel',
+        'sourceReputation','communityFlags','needsFactCheck','isBreaking',
+        'isTrending','aiSummary','aiCredibilityScore','aiDetectedBias',
+        'aiBiasConfidence','aiBiasJustification','aiBiasAlignedElements',
+        'aiBiasProvider','aiBiasGeneratedAt','viewCount','shareCount',
+        'bookmarkCount','commentCount','totalVotes','averageCredibility',
+        'averageQuality','updatedAt'
+      ];
+    }
+
+    function communityEditableNewsKeys() {
+      return [
+        'viewCount','shareCount','bookmarkCount','commentCount',
+        'totalVotes','averageCredibility','averageQuality','biasScore',
+        'aiSummary','aiCredibilityScore','aiDetectedBias','aiBiasConfidence',
+        'aiBiasJustification','aiBiasAlignedElements','aiBiasProvider',
+        'aiBiasGeneratedAt','updatedAt'
+      ];
+    }
+
+    function ownerNewsUpdateAllowed() {
+      let diff = request.resource.data.diff(resource.data);
+      return newsProtectedFieldsUnchanged() &&
+             diff.removedKeys().size() == 0 &&
+             diff.changedKeys().hasOnly(ownerEditableNewsKeys()) &&
+             diff.addedKeys().hasOnly(ownerEditableNewsKeys());
+    }
+
+    function communityNewsUpdateAllowed() {
+      let diff = request.resource.data.diff(resource.data);
+      return newsProtectedFieldsUnchanged() &&
+             diff.removedKeys().size() == 0 &&
+             diff.changedKeys().hasOnly(communityEditableNewsKeys()) &&
+             diff.addedKeys().hasOnly(communityEditableNewsKeys());
+    }
+
+    function validNewsCreate() {
+      return request.resource.data.keys().hasOnly([
+               'title','summary','category','submittedBy',
+               'isUserGenerated','createdAt','updatedAt','tags','urgencyLevel',
+               'content','sources','biasScore','totalSources','userVotes',
+               'sourceReputation','communityFlags','needsFactCheck','isBreaking',
+               'isTrending','aiSummary','aiCredibilityScore','aiDetectedBias',
+               'aiBiasConfidence','aiBiasJustification','aiBiasAlignedElements',
+               'aiBiasProvider','aiBiasGeneratedAt','viewCount','shareCount',
+               'bookmarkCount','commentCount','totalVotes','averageCredibility',
+               'averageQuality','media'
+             ]) &&
+             isNonEmptyString(request.resource.data.title) &&
+             isNonEmptyString(request.resource.data.summary) &&
+             isNonEmptyString(request.resource.data.category) &&
+             request.resource.data.submittedBy == request.auth.uid &&
+             request.resource.data.isUserGenerated == true &&
+             isTimestamp(request.resource.data.createdAt) &&
+             isTimestamp(request.resource.data.updatedAt) &&
+             (!request.resource.data.keys().hasAny(['tags']) || request.resource.data.tags is list) &&
+             (!request.resource.data.keys().hasAny(['urgencyLevel']) || request.resource.data.urgencyLevel is string);
+    }
+
+    match /news/{newsId} {
+      allow read: if true;
+      allow create: if isSignedIn() && validNewsCreate();
+      allow update: if isSignedIn() &&
+                      (resource.data.submittedBy == request.auth.uid
+                        ? ownerNewsUpdateAllowed()
+                        : communityNewsUpdateAllowed());
+      allow delete: if isSignedIn() && resource.data.submittedBy == request.auth.uid;
+    }
+
+    function validBookmarkCreate() {
+      return request.resource.data.keys().hasOnly([
+               'newsStoryId','userId','title','summary','category',
+               'bookmarkedAt','tags','notes','isRead','readAt',
+               'readingProgress','collectionId','priority','cachedStory','imageUrl'
+             ]) &&
+             request.resource.data.userId == request.auth.uid &&
+             request.resource.data.newsStoryId is string &&
+             isNonEmptyString(request.resource.data.title) &&
+             isNonEmptyString(request.resource.data.summary) &&
+             isNonEmptyString(request.resource.data.category) &&
+             isTimestamp(request.resource.data.bookmarkedAt) &&
+             request.resource.data.tags is list &&
+             request.resource.data.isRead is bool;
+    }
+
+    function bookmarkUpdateAllowed() {
+      let diff = request.resource.data.diff(resource.data);
+      return request.resource.data.userId == resource.data.userId &&
+             request.resource.data.newsStoryId == resource.data.newsStoryId &&
+             request.resource.data.bookmarkedAt == resource.data.bookmarkedAt &&
+             diff.removedKeys().size() == 0 &&
+             diff.addedKeys().size() == 0 &&
+             diff.changedKeys().hasOnly([
+               'tags','notes','isRead','readAt','readingProgress',
+               'collectionId','priority','cachedStory','imageUrl'
+             ]);
+    }
+
+    match /bookmarks/{bookmarkId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && validBookmarkCreate();
+      allow update: if isSignedIn() && resource.data.userId == request.auth.uid && bookmarkUpdateAllowed();
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    function validCollectionCreate() {
+      return request.resource.data.keys().hasOnly([
+               'userId','name','description','isDefault',
+               'createdAt','updatedAt','bookmarkCount','color','icon'
+             ]) &&
+             request.resource.data.userId == request.auth.uid &&
+             isNonEmptyString(request.resource.data.name) &&
+             isTimestamp(request.resource.data.createdAt) &&
+             isTimestamp(request.resource.data.updatedAt) &&
+             nonNegativeNumber(request.resource.data.bookmarkCount);
+    }
+
+    function collectionUpdateAllowed() {
+      let diff = request.resource.data.diff(resource.data);
+      return request.resource.data.userId == resource.data.userId &&
+             request.resource.data.createdAt == resource.data.createdAt &&
+             diff.removedKeys().size() == 0 &&
+             diff.addedKeys().size() == 0 &&
+             diff.changedKeys().hasOnly([
+               'name','description','updatedAt','color','icon','bookmarkCount'
+             ]) &&
+             isTimestamp(request.resource.data.updatedAt) &&
+             nonNegativeNumber(request.resource.data.bookmarkCount);
+    }
+
+    match /bookmarkCollections/{collectionId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && validCollectionCreate();
+      allow update: if isSignedIn() && resource.data.userId == request.auth.uid && collectionUpdateAllowed();
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    function validCommentCreate() {
+      return request.resource.data.keys().hasOnly([
+               'newsStoryId','userId','userName','userAvatar','content',
+               'likes','dislikes','likedBy','dislikedBy','isReported',
+               'reportCount','isHidden','createdAt','updatedAt','isEdited',
+               'parentCommentId','replies','replyCount'
+             ]) &&
+             request.resource.data.newsStoryId is string &&
+             request.resource.data.userId == request.auth.uid &&
+             request.resource.data.userName is string &&
+             request.resource.data.userAvatar is string &&
+             isNonEmptyString(request.resource.data.content) &&
+             request.resource.data.content.size() <= 2000 &&
+             request.resource.data.likes == 0 &&
+             request.resource.data.dislikes == 0 &&
+             request.resource.data.likedBy is list &&
+             request.resource.data.dislikedBy is list &&
+             request.resource.data.isReported == false &&
+             request.resource.data.reportCount == 0 &&
+             request.resource.data.isHidden == false &&
+             request.resource.data.replies is list &&
+             request.resource.data.replyCount == 0 &&
+             isTimestamp(request.resource.data.createdAt) &&
+             isTimestamp(request.resource.data.updatedAt) &&
+             (request.resource.data.parentCommentId == null || request.resource.data.parentCommentId is string);
+    }
+
+    function commentBaseUnchanged() {
+      return request.resource.data.newsStoryId == resource.data.newsStoryId &&
+             request.resource.data.userId == resource.data.userId &&
+             request.resource.data.userName == resource.data.userName &&
+             request.resource.data.userAvatar == resource.data.userAvatar &&
+             request.resource.data.createdAt == resource.data.createdAt &&
+             request.resource.data.parentCommentId == resource.data.parentCommentId &&
+             request.resource.data.replies == resource.data.replies;
+    }
+
+    function toggleValid(oldList, newList, oldCount, newCount) {
+      let oldHas = oldList.hasAny([request.auth.uid]);
+      let newHas = newList.hasAny([request.auth.uid]);
+      return (oldHas == newHas && newCount == oldCount) ||
+             (!oldHas && newHas && newCount == oldCount + 1) ||
+             (oldHas && !newHas && newCount == oldCount - 1);
+    }
+
+    function reactionUpdateAllowed() {
+      let diff = request.resource.data.diff(resource.data);
+      return commentBaseUnchanged() &&
+             diff.removedKeys().size() == 0 &&
+             diff.addedKeys().size() == 0 &&
+             diff.changedKeys().hasOnly(['likes','dislikes','likedBy','dislikedBy','updatedAt']) &&
+             toggleValid(resource.data.likedBy, request.resource.data.likedBy,
+                         resource.data.likes, request.resource.data.likes) &&
+             toggleValid(resource.data.dislikedBy, request.resource.data.dislikedBy,
+                         resource.data.dislikes, request.resource.data.dislikes) &&
+             nonNegativeNumber(request.resource.data.likes) &&
+             nonNegativeNumber(request.resource.data.dislikes) &&
+             isTimestamp(request.resource.data.updatedAt);
+    }
+
+    function reportUpdateAllowed() {
+      let diff = request.resource.data.diff(resource.data);
+      return commentBaseUnchanged() &&
+             diff.removedKeys().size() == 0 &&
+             diff.addedKeys().size() == 0 &&
+             diff.changedKeys().hasOnly(['isReported','reportCount','updatedAt']) &&
+             request.resource.data.isReported == true &&
+             request.resource.data.reportCount == resource.data.reportCount + 1 &&
+             isTimestamp(request.resource.data.updatedAt);
+    }
+
+    function replyCountUpdateAllowed() {
+      let diff = request.resource.data.diff(resource.data);
+      return commentBaseUnchanged() &&
+             diff.removedKeys().size() == 0 &&
+             diff.addedKeys().size() == 0 &&
+             diff.changedKeys().hasOnly(['replyCount']) &&
+             request.resource.data.replyCount == resource.data.replyCount + 1;
+    }
+
+    function authorEditAllowed() {
+      let diff = request.resource.data.diff(resource.data);
+      return commentBaseUnchanged() &&
+             resource.data.userId == request.auth.uid &&
+             diff.removedKeys().size() == 0 &&
+             diff.addedKeys().size() == 0 &&
+             diff.changedKeys().hasOnly(['content','isEdited','updatedAt']) &&
+             isNonEmptyString(request.resource.data.content) &&
+             request.resource.data.content.size() <= 2000 &&
+             request.resource.data.isEdited == true &&
+             isTimestamp(request.resource.data.updatedAt);
+    }
+
+    match /comments/{commentId} {
+      allow read: if true;
+      allow create: if isSignedIn() && validCommentCreate();
+      allow update: if isSignedIn() &&
+                      (authorEditAllowed() ||
+                       reactionUpdateAllowed() ||
+                       reportUpdateAllowed() ||
+                       replyCountUpdateAllowed());
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    function validVote(data) {
+      return data.keys().hasOnly([
+               'newsStoryId','userId','userName','biasVote',
+               'credibilityVote','qualityVote','votedAt'
+             ]) &&
+             data.newsStoryId is string &&
+             data.userId == request.auth.uid &&
+             data.userName is string &&
+             (data.biasVote == 'left' || data.biasVote == 'center' || data.biasVote == 'right') &&
+             data.credibilityVote is int && data.credibilityVote >= 1 && data.credibilityVote <= 5 &&
+             data.qualityVote is int && data.qualityVote >= 1 && data.qualityVote <= 5 &&
+             isTimestamp(data.votedAt);
+    }
+
+    match /votes/{voteId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && validVote(request.resource.data);
+      allow update: if isSignedIn() && resource.data.userId == request.auth.uid && validVote(request.resource.data);
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    match /newsStories/{docId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

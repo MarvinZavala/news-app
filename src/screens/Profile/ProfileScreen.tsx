@@ -12,6 +12,7 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
   const { user, logout } = useAuth();
 
   const menuItems = [
+    { title: 'My News Stories', icon: 'newspaper-outline', screen: 'UserNewsManager' as keyof ProfileStackParamList, description: 'Manage your submitted news' },
     { title: 'Settings', icon: 'settings-outline', screen: 'Settings' as keyof ProfileStackParamList },
     { title: 'Edit Profile', icon: 'person-outline', screen: 'EditProfile' as keyof ProfileStackParamList },
     { title: 'Notifications', icon: 'notifications-outline', screen: 'Notifications' as keyof ProfileStackParamList },
@@ -33,9 +34,30 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
         
         <View style={styles.menu}>
           {menuItems.map((item, index) => (
-            <TouchableOpacity key={index} style={styles.menuItem} onPress={() => navigation.navigate(item.screen)}>
-              <Ionicons name={item.icon as any} size={24} color="#666" />
-              <Text style={styles.menuText}>{item.title}</Text>
+            <TouchableOpacity
+              key={index}
+              style={[
+                styles.menuItem,
+                item.title === 'My News Stories' && styles.featuredMenuItem
+              ]}
+              onPress={() => navigation.navigate(item.screen)}
+            >
+              <Ionicons
+                name={item.icon as any}
+                size={24}
+                color={item.title === 'My News Stories' ? "#1DA1F2" : "#666"}
+              />
+              <View style={styles.menuTextContainer}>
+                <Text style={[
+                  styles.menuText,
+                  item.title === 'My News Stories' && styles.featuredMenuText
+                ]}>
+                  {item.title}
+                </Text>
+                {'description' in item && (
+                  <Text style={styles.menuDescription}>{item.description}</Text>
+                )}
+              </View>
               <Ionicons name="chevron-forward" size={20} color="#ccc" />
             </TouchableOpacity>
           ))}
@@ -58,7 +80,11 @@ const styles = StyleSheet.create({
   email: { fontSize: 16, color: '#666' },
   menu: { padding: 20 },
   menuItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#f5f5f5' },
-  menuText: { flex: 1, marginLeft: 16, fontSize: 16, color: '#333' },
+  featuredMenuItem: { backgroundColor: '#F0F9FF', borderRadius: 8, paddingHorizontal: 12, marginBottom: 8, borderBottomWidth: 0 },
+  menuTextContainer: { flex: 1, marginLeft: 16 },
+  menuText: { fontSize: 16, color: '#333' },
+  featuredMenuText: { color: '#1DA1F2', fontWeight: '600' },
+  menuDescription: { fontSize: 12, color: '#666', marginTop: 2 },
   logoutButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', margin: 20, padding: 16, backgroundColor: '#FFF5F5', borderRadius: 8 },
   logoutText: { marginLeft: 8, fontSize: 16, color: '#FF4444', fontWeight: '600' },
 });

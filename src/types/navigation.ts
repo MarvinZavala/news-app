@@ -87,6 +87,7 @@ export type ProfileStackParamList = {
   About: undefined;
   ChangePassword: undefined;
   AccountSettings: undefined;
+  UserNewsManager: undefined;
 };
 
 // Utility types for search functionality

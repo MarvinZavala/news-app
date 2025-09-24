@@ -8,7 +8,8 @@
       "Bash(npx expo:*)",
       "Bash(source:*)",
       "Bash(pip install:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(firebase deploy:*)"
     ],
     "deny": [],
     "ask": []
