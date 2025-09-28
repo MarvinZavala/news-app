@@ -9,7 +9,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "extra": {
       "HF_API_TOKEN": "",
       "ANTHROPIC_API_KEY": "",
