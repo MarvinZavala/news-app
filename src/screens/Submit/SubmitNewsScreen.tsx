@@ -14,7 +14,7 @@ import {
   Dimensions,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { Video } from 'expo-av';
+import { Video, ResizeMode } from 'expo-av';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -236,7 +236,7 @@ const SubmitNewsScreen: React.FC<Props> = ({ navigation }) => {
       uri: asset.uri,
       fileName,
       size: asset.fileSize || 0,
-      duration: asset.duration,
+      duration: asset.duration ?? undefined,
       width: asset.width,
       height: asset.height,
     };
@@ -665,7 +665,7 @@ const SubmitNewsScreen: React.FC<Props> = ({ navigation }) => {
                       source={{ uri: video.uri }}
                       style={styles.videoPreview}
                       useNativeControls
-                      resizeMode="contain"
+                      resizeMode={ResizeMode.CONTAIN}
                       shouldPlay={false}
                     />
                     
