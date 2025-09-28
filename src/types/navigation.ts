@@ -119,11 +119,8 @@ export interface UserNewsSubmissionForm {
   primaryUrl?: string; // Now optional
   summary: string;
   category: string;
-  tags: string[];
-  additionalSources: string[];
   urgencyLevel: 'normal' | 'breaking' | 'developing';
   sourceReputation: 'verified' | 'questionable' | 'unknown';
-  hasMultipleSources: boolean;
   suggestedBias?: 'left' | 'center' | 'right';
   suggestedCredibility?: number;
   factCheckNotes?: string;

@@ -379,6 +379,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    flex: 1,
   },
   category: {
     fontSize: 11,
@@ -439,6 +440,8 @@ const styles = StyleSheet.create({
   timeAgo: {
     fontSize: 11,
     color: '#999',
+    lineHeight: 14,
+    textAlignVertical: 'center',
   },
 
   // Cover Image styles
@@ -647,8 +650,8 @@ const styles = StyleSheet.create({
   // Enhanced user generated content
   userGeneratedSection: {
     position: 'absolute',
-    top: 8,
-    right: 8,
+    top: 14,
+    right: 75,
     gap: 4,
   },
   userGeneratedBadge: {

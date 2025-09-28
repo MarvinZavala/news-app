@@ -71,23 +71,20 @@ const SubmitNewsScreen: React.FC<Props> = ({ navigation }) => {
     primaryUrl: '',
     summary: '',
     category: 'Politics',
-    tags: [],
-    additionalSources: [],
     urgencyLevel: 'normal',
     sourceReputation: 'unknown',
-    hasMultipleSources: false,
     photos: [],
     videos: [],
     selectedCoverImageId: undefined,
   });
   
-  const [newTag, setNewTag] = useState('');
-  const [newSource, setNewSource] = useState('');
   const [urlAnalysis, setUrlAnalysis] = useState<{
     domain: string;
     isAnalyzed: boolean;
     reputation?: 'verified' | 'questionable' | 'unknown';
   } | null>(null);
+  const [urlError, setUrlError] = useState<string>('');
+  const [mediaLoading, setMediaLoading] = useState<boolean>(false);
 
   // Validation
   const isValidUrl = (url: string): boolean => {
@@ -130,20 +127,22 @@ const SubmitNewsScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   const pickPhotos = async () => {
+    if (mediaLoading) return;
+
     const hasLibrary = await ensureLibraryPermission();
     if (!hasLibrary) return;
 
     const currentPhotoCount = formData.photos.length;
     const remainingSlots = mediaService.getFileSizeLimits().maxPhotos - currentPhotoCount;
-    
+
     if (remainingSlots <= 0) {
       Alert.alert('Limit Reached', `Maximum ${mediaService.getFileSizeLimits().maxPhotos} photos allowed`);
       return;
     }
 
     Alert.alert(
-      'Select Photos',
-      'Choose how you want to add photos',
+      'Add Photos',
+      `Add up to ${remainingSlots} more photos`,
       [
         { text: 'Camera', onPress: async () => { if (await ensureCameraPermission()) { takePicture(); } } },
         { text: 'Photo Library', onPress: () => pickFromLibrary('photo') },
@@ -173,15 +172,20 @@ const SubmitNewsScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   const takePicture = async () => {
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [16, 9],
-      quality: 0.8,
-    });
+    setMediaLoading(true);
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [16, 9],
+        quality: 0.8,
+      });
 
-    if (!result.canceled && result.assets[0]) {
-      addMediaFile(result.assets[0], 'photo');
+      if (!result.canceled && result.assets[0]) {
+        addMediaFile(result.assets[0], 'photo');
+      }
+    } finally {
+      setMediaLoading(false);
     }
   };
 
@@ -200,30 +204,35 @@ const SubmitNewsScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   const pickFromLibrary = async (type: 'photo' | 'video') => {
-    const mediaTypeOptions = type === 'photo' 
-      ? ImagePicker.MediaTypeOptions.Images 
-      : ImagePicker.MediaTypeOptions.Videos;
+    setMediaLoading(true);
+    try {
+      const mediaTypeOptions = type === 'photo'
+        ? ImagePicker.MediaTypeOptions.Images
+        : ImagePicker.MediaTypeOptions.Videos;
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: mediaTypeOptions,
-      allowsMultipleSelection: type === 'photo',
-      allowsEditing: type === 'video',
-      aspect: [16, 9],
-      quality: 0.8,
-      videoMaxDuration: 180, // 3 minutes
-    });
-
-    if (!result.canceled) {
-      // Respect remaining photo slots when adding multiple
-      const limits = mediaService.getFileSizeLimits();
-      const currentCount = type === 'photo' ? formData.photos.length : formData.videos.length;
-      const maxCount = type === 'photo' ? limits.maxPhotos : 1;
-      const remaining = Math.max(0, maxCount - currentCount);
-      const assetsToAdd = type === 'photo' ? result.assets.slice(0, remaining) : result.assets.slice(0, 1);
-
-      assetsToAdd.forEach(asset => {
-        addMediaFile(asset, type);
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: mediaTypeOptions,
+        allowsMultipleSelection: type === 'photo',
+        allowsEditing: type === 'video',
+        aspect: [16, 9],
+        quality: 0.8,
+        videoMaxDuration: 180, // 3 minutes
       });
+
+      if (!result.canceled) {
+        // Respect remaining photo slots when adding multiple
+        const limits = mediaService.getFileSizeLimits();
+        const currentCount = type === 'photo' ? formData.photos.length : formData.videos.length;
+        const maxCount = type === 'photo' ? limits.maxPhotos : 1;
+        const remaining = Math.max(0, maxCount - currentCount);
+        const assetsToAdd = type === 'photo' ? result.assets.slice(0, remaining) : result.assets.slice(0, 1);
+
+        assetsToAdd.forEach(asset => {
+          addMediaFile(asset, type);
+        });
+      }
+    } finally {
+      setMediaLoading(false);
     }
   };
 
@@ -310,13 +319,6 @@ const SubmitNewsScreen: React.FC<Props> = ({ navigation }) => {
       return;
     }
     
-    // Validate additional sources
-    for (let i = 0; i < formData.additionalSources.length; i++) {
-      if (!isValidUrl(formData.additionalSources[i])) {
-        Alert.alert('Error', `Additional source ${i + 1} is not a valid URL`);
-        return;
-      }
-    }
 
     if (!formData.summary.trim()) {
       Alert.alert('Error', 'Please enter a summary');
@@ -388,32 +390,7 @@ const SubmitNewsScreen: React.FC<Props> = ({ navigation }) => {
     return 'unknown';
   };
   
-  const addTag = () => {
-    if (newTag.trim() && !formData.tags.includes(newTag.trim())) {
-      updateFormData('tags', [...formData.tags, newTag.trim()]);
-      setNewTag('');
-    }
-  };
   
-  const removeTag = (tagToRemove: string) => {
-    updateFormData('tags', formData.tags.filter(tag => tag !== tagToRemove));
-  };
-  
-  const addAdditionalSource = () => {
-    if (newSource.trim() && isValidUrl(newSource.trim())) {
-      updateFormData('additionalSources', [...formData.additionalSources, newSource.trim()]);
-      updateFormData('hasMultipleSources', true);
-      setNewSource('');
-    } else {
-      Alert.alert('Error', 'Please enter a valid URL for additional source');
-    }
-  };
-  
-  const removeAdditionalSource = (index: number) => {
-    const newSources = formData.additionalSources.filter((_, i) => i !== index);
-    updateFormData('additionalSources', newSources);
-    updateFormData('hasMultipleSources', newSources.length > 0);
-  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -450,9 +427,15 @@ const SubmitNewsScreen: React.FC<Props> = ({ navigation }) => {
               value={formData.primaryUrl}
               onChangeText={(text) => {
                 updateFormData('primaryUrl', text);
-                if (text.trim() && isValidUrl(text.trim())) {
-                  analyzeUrl(text.trim());
-                } else if (!text.trim()) {
+                setUrlError('');
+                if (text.trim()) {
+                  if (isValidUrl(text.trim())) {
+                    analyzeUrl(text.trim());
+                  } else {
+                    setUrlAnalysis(null);
+                    setUrlError('Please enter a valid URL (e.g., https://example.com)');
+                  }
+                } else {
                   setUrlAnalysis(null);
                 }
               }}
@@ -461,11 +444,16 @@ const SubmitNewsScreen: React.FC<Props> = ({ navigation }) => {
               autoCorrect={false}
             />
             
-            {/* URL Analysis */}
-            {urlAnalysis && (
+            {/* URL Analysis or Error */}
+            {urlError ? (
+              <View style={styles.urlError}>
+                <Ionicons name="alert-circle" size={16} color="#EF4444" />
+                <Text style={styles.urlErrorText}>{urlError}</Text>
+              </View>
+            ) : urlAnalysis && (
               <View style={[
                 styles.urlAnalysis,
-                { backgroundColor: 
+                { backgroundColor:
                   urlAnalysis.reputation === 'verified' ? '#DCFCE7' :
                   urlAnalysis.reputation === 'questionable' ? '#FEF3C7' : '#F3F4F6'
                 }
@@ -473,7 +461,7 @@ const SubmitNewsScreen: React.FC<Props> = ({ navigation }) => {
                 <Text style={styles.urlDomain}>{urlAnalysis.domain}</Text>
                 <Text style={[
                   styles.reputationText,
-                  { color: 
+                  { color:
                     urlAnalysis.reputation === 'verified' ? '#059669' :
                     urlAnalysis.reputation === 'questionable' ? '#D97706' : '#6B7280'
                   }
@@ -502,8 +490,13 @@ const SubmitNewsScreen: React.FC<Props> = ({ navigation }) => {
               onChangeText={(text) => updateFormData('title', text)}
               maxLength={300}
             />
-            <Text style={styles.charCount}>
-              {getCharCountWithoutSpaces(formData.title)}/200 (no spaces)
+            <Text style={[
+              styles.charCount,
+              getCharCountWithoutSpaces(formData.title) > 180 && styles.charCountWarning,
+              getCharCountWithoutSpaces(formData.title) > 195 && styles.charCountDanger
+            ]}>
+              {getCharCountWithoutSpaces(formData.title)}/200 characters
+              {getCharCountWithoutSpaces(formData.title) > 180 && ' ⚠️'}
             </Text>
           </View>
 
@@ -554,12 +547,21 @@ const SubmitNewsScreen: React.FC<Props> = ({ navigation }) => {
               maxLength={4000}
               textAlignVertical="top"
             />
-            <Text style={[
-              styles.charCount,
-              getCharCountWithoutSpaces(formData.summary) < 50 && styles.charCountWarning
-            ]}>
-              {getCharCountWithoutSpaces(formData.summary)}/2500 (no spaces) {getCharCountWithoutSpaces(formData.summary) < 50 && '(min 50)'}
-            </Text>
+            <View style={styles.charCountContainer}>
+              <Text style={[
+                styles.charCount,
+                getCharCountWithoutSpaces(formData.summary) < 50 && styles.charCountWarning,
+                getCharCountWithoutSpaces(formData.summary) > 2400 && styles.charCountWarning,
+                getCharCountWithoutSpaces(formData.summary) > 2450 && styles.charCountDanger
+              ]}>
+                {getCharCountWithoutSpaces(formData.summary)}/2500 characters
+                {getCharCountWithoutSpaces(formData.summary) < 50 && ' (minimum 50)'}
+                {getCharCountWithoutSpaces(formData.summary) > 2400 && ' ⚠️'}
+              </Text>
+              {getCharCountWithoutSpaces(formData.summary) >= 50 && (
+                <Text style={styles.charCountSuccess}>✓</Text>
+              )}
+            </View>
           </View>
           
           {/* Media Upload Section */}
@@ -568,36 +570,44 @@ const SubmitNewsScreen: React.FC<Props> = ({ navigation }) => {
               📷 Photos & Videos (Optional)
             </Text>
             <Text style={styles.hint}>
-              Add up to 8 photos and 1 video (max 3 minutes) to enhance your news story
+              Enhance your story with visuals • Up to 8 photos and 1 video (max 3 min)
             </Text>
             
             {/* Media Upload Buttons */}
             <View style={styles.mediaButtonsContainer}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[
-                  styles.mediaButton, 
-                  formData.photos.length >= mediaService.getFileSizeLimits().maxPhotos && styles.mediaButtonDisabled
-                ]} 
+                  styles.mediaButton,
+                  (formData.photos.length >= mediaService.getFileSizeLimits().maxPhotos || mediaLoading) && styles.mediaButtonDisabled
+                ]}
                 onPress={pickPhotos}
-                disabled={formData.photos.length >= mediaService.getFileSizeLimits().maxPhotos}
+                disabled={formData.photos.length >= mediaService.getFileSizeLimits().maxPhotos || mediaLoading}
               >
-                <Ionicons name="camera" size={20} color="#1DA1F2" />
+                {mediaLoading ? (
+                  <ActivityIndicator size="small" color="#1DA1F2" />
+                ) : (
+                  <Ionicons name="camera" size={20} color="#1DA1F2" />
+                )}
                 <Text style={styles.mediaButtonText}>
-                  Add Photos ({formData.photos.length}/8)
+                  {mediaLoading ? 'Adding...' : `Add Photos (${formData.photos.length}/8)`}
                 </Text>
               </TouchableOpacity>
               
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[
-                  styles.mediaButton, 
-                  formData.videos.length >= 1 && styles.mediaButtonDisabled
-                ]} 
+                  styles.mediaButton,
+                  (formData.videos.length >= 1 || mediaLoading) && styles.mediaButtonDisabled
+                ]}
                 onPress={pickVideo}
-                disabled={formData.videos.length >= 1}
+                disabled={formData.videos.length >= 1 || mediaLoading}
               >
-                <Ionicons name="videocam" size={20} color="#1DA1F2" />
+                {mediaLoading ? (
+                  <ActivityIndicator size="small" color="#1DA1F2" />
+                ) : (
+                  <Ionicons name="videocam" size={20} color="#1DA1F2" />
+                )}
                 <Text style={styles.mediaButtonText}>
-                  Add Video ({formData.videos.length}/1)
+                  {mediaLoading ? 'Adding...' : `Add Video (${formData.videos.length}/1)`}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -648,9 +658,12 @@ const SubmitNewsScreen: React.FC<Props> = ({ navigation }) => {
                 </View>
                 
                 {formData.selectedCoverImageId && (
-                  <Text style={styles.coverImageHint}>
-                    ⭐ Selected photo will be used as the cover image
-                  </Text>
+                  <View style={styles.coverImageHintContainer}>
+                    <Ionicons name="star" size={14} color="#FFD700" />
+                    <Text style={styles.coverImageHint}>
+                      This photo will be used as the cover image
+                    </Text>
+                  </View>
                 )}
               </View>
             )}
@@ -730,83 +743,6 @@ const SubmitNewsScreen: React.FC<Props> = ({ navigation }) => {
             </View>
           </View>
           
-          {/* Tags */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>
-              🏷️ Tags (Optional)
-            </Text>
-            
-            {/* Tag Input */}
-            <View style={styles.tagInputContainer}>
-              <TextInput
-                style={[styles.input, styles.tagInput]}
-                placeholder="Add relevant tags (e.g., election, healthcare)"
-                value={newTag}
-                onChangeText={setNewTag}
-                onSubmitEditing={addTag}
-                returnKeyType="done"
-                maxLength={30}
-              />
-              <TouchableOpacity style={styles.addTagButton} onPress={addTag}>
-                <Ionicons name="add" size={20} color="#1DA1F2" />
-              </TouchableOpacity>
-            </View>
-            
-            {/* Existing Tags */}
-            {formData.tags.length > 0 && (
-              <View style={styles.tagsContainer}>
-                {formData.tags.map((tag, index) => (
-                  <View key={index} style={styles.tag}>
-                    <Text style={styles.tagText}>{tag}</Text>
-                    <TouchableOpacity onPress={() => removeTag(tag)}>
-                      <Ionicons name="close" size={14} color="#666" />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </View>
-            )}
-          </View>
-          
-          {/* Additional Sources */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>
-              🔗 Additional Sources (Optional)
-            </Text>
-            <Text style={styles.hint}>
-              Add more sources covering the same story to improve credibility
-            </Text>
-            
-            {/* Add Source Input */}
-            <View style={styles.tagInputContainer}>
-              <TextInput
-                style={[styles.input, styles.tagInput]}
-                placeholder="https://another-source.com/same-story"
-                value={newSource}
-                onChangeText={setNewSource}
-                keyboardType="url"
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-              <TouchableOpacity style={styles.addTagButton} onPress={addAdditionalSource}>
-                <Ionicons name="add" size={20} color="#1DA1F2" />
-              </TouchableOpacity>
-            </View>
-            
-            {/* Existing Additional Sources */}
-            {formData.additionalSources.map((source, index) => (
-              <View key={index} style={styles.sourceItem}>
-                <View style={styles.sourceInfo}>
-                  <Ionicons name="link-outline" size={16} color="#1DA1F2" />
-                  <Text style={styles.sourceUrl} numberOfLines={1}>
-                    {source}
-                  </Text>
-                </View>
-                <TouchableOpacity onPress={() => removeAdditionalSource(index)}>
-                  <Ionicons name="trash-outline" size={16} color="#EF4444" />
-                </TouchableOpacity>
-              </View>
-            ))}
-          </View>
 
           {/* Bias Assessment (Optional) */}
           <View style={styles.inputContainer}>
@@ -1027,6 +963,21 @@ const styles = StyleSheet.create({
     color: '#F59E0B',
     fontWeight: '600',
   },
+  charCountDanger: {
+    color: '#EF4444',
+    fontWeight: '600',
+  },
+  charCountContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 6,
+  },
+  charCountSuccess: {
+    color: '#10B981',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
   
   // Category styles
   categoryScroll: {
@@ -1073,6 +1024,22 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
+
+  // URL Error styles
+  urlError: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF2F2',
+    padding: 8,
+    borderRadius: 6,
+    marginTop: 6,
+    gap: 6,
+  },
+  urlErrorText: {
+    color: '#EF4444',
+    fontSize: 12,
+    flex: 1,
+  },
   
   // Urgency styles
   urgencyContainer: {
@@ -1094,66 +1061,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   
-  // Tags styles
-  tagInputContainer: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  tagInput: {
-    flex: 1,
-  },
-  addTagButton: {
-    backgroundColor: '#F0F9FF',
-    borderWidth: 1,
-    borderColor: '#1DA1F2',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  tagsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 12,
-  },
-  tag: {
-    backgroundColor: '#E0F2FE',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  tagText: {
-    fontSize: 14,
-    color: '#0369A1',
-    fontWeight: '500',
-  },
   
-  // Additional sources styles
-  sourceItem: {
-    backgroundColor: '#F8F9FA',
-    padding: 12,
-    borderRadius: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 8,
-  },
-  sourceInfo: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  sourceUrl: {
-    flex: 1,
-    fontSize: 12,
-    color: '#1DA1F2',
-  },
   
   // Bias assessment styles
   biasContainer: {
@@ -1379,12 +1287,17 @@ const styles = StyleSheet.create({
   },
   
   // Cover image hint
+  coverImageHintContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+    gap: 4,
+  },
   coverImageHint: {
     fontSize: 12,
     color: '#666',
     fontStyle: 'italic',
-    textAlign: 'center',
-    marginTop: 8,
   },
 });
 
