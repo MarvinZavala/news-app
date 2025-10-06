@@ -8,8 +8,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
+  ScrollView,
   Alert,
-  ActivityIndicator
+  ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -30,6 +32,9 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const [passwordFocused, setPasswordFocused] = useState(false);
 
   const { login, isLoading } = useAuth();
+  const { height } = useWindowDimensions();
+  const isSmallScreen = height < 720;
+  const isVerySmallScreen = height < 660;
 
   const handleLogin = async () => {
     // Validation
@@ -74,33 +79,73 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardAvoidingView}
       >
-        <View style={styles.content}>
+        <ScrollView
+          bounces={false}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={[
+            styles.scrollContent,
+            isSmallScreen && styles.scrollContentCompact,
+            isVerySmallScreen && styles.scrollContentVeryCompact,
+          ]}
+        >
           {/* Header Section */}
-          <View style={styles.header}>
-            <View style={styles.iconContainer}>
+          <View
+            style={[
+              styles.header,
+              isSmallScreen && styles.headerCompact,
+              isVerySmallScreen && styles.headerVeryCompact,
+            ]}
+          >
+            <View style={[styles.iconContainer, isSmallScreen && styles.iconSmall]}>
               <Ionicons name="newspaper-outline" size={48} color="#1DA1F2" />
             </View>
-            <Text style={styles.welcomeText}>👋 Welcome to</Text>
-            <Text style={styles.title}>NewsApp</Text>
-            <Text style={styles.subtitle}>Stay informed with bias-aware news from multiple perspectives</Text>
-            <View style={styles.featuresContainer}>
-              <View style={styles.featureItem}>
-                <Ionicons name="analytics-outline" size={16} color="#1DA1F2" />
-                <Text style={styles.featureText}>Bias Analysis</Text>
+            <Text style={[styles.welcomeText, isSmallScreen && styles.welcomeCompact]}>
+              👋 Welcome to
+            </Text>
+            <Text style={[styles.title, isSmallScreen && styles.titleCompact]}>
+              NewsApp
+            </Text>
+            <Text
+              style={[styles.subtitle, isSmallScreen && styles.subtitleCompact]}
+            >
+              Stay informed with bias-aware news from multiple perspectives
+            </Text>
+            {!isVerySmallScreen && (
+              <View
+                style={[
+                  styles.featuresContainer,
+                  isSmallScreen && styles.featuresContainerCompact,
+                ]}
+              >
+                <View style={styles.featureItem}>
+                  <Ionicons name="analytics-outline" size={16} color="#1DA1F2" />
+                  <Text style={styles.featureText}>Bias Analysis</Text>
+                </View>
+                <View style={styles.featureItem}>
+                  <Ionicons name="people-outline" size={16} color="#1DA1F2" />
+                  <Text style={styles.featureText}>Community Votes</Text>
+                </View>
+                <View style={styles.featureItem}>
+                  <Ionicons
+                    name="shield-checkmark-outline"
+                    size={16}
+                    color="#1DA1F2"
+                  />
+                  <Text style={styles.featureText}>Verified Sources</Text>
+                </View>
               </View>
-              <View style={styles.featureItem}>
-                <Ionicons name="people-outline" size={16} color="#1DA1F2" />
-                <Text style={styles.featureText}>Community Votes</Text>
-              </View>
-              <View style={styles.featureItem}>
-                <Ionicons name="shield-checkmark-outline" size={16} color="#1DA1F2" />
-                <Text style={styles.featureText}>Verified Sources</Text>
-              </View>
-            </View>
+            )}
           </View>
 
           {/* Form Section */}
-          <View style={styles.form}>
+          <View
+            style={[
+              styles.form,
+              isSmallScreen && styles.formCompact,
+              isVerySmallScreen && styles.formVeryCompact,
+            ]}
+          >
             {/* Email Input */}
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Email Address</Text>
@@ -195,13 +240,19 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           </View>
 
           {/* Footer */}
-          <View style={styles.footer}>
+          <View
+            style={[
+              styles.footer,
+              isSmallScreen && styles.footerCompact,
+              isVerySmallScreen && styles.footerVeryCompact,
+            ]}
+          >
             <Text style={styles.footerText}>New to NewsApp? </Text>
             <TouchableOpacity onPress={() => navigation.navigate('Register')}>
               <Text style={styles.signupText}>Create free account</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -215,17 +266,33 @@ const styles = StyleSheet.create({
   keyboardAvoidingView: {
     flex: 1,
   },
-  content: {
-    flex: 1,
+  scrollContent: {
+    flexGrow: 1,
     paddingHorizontal: 24,
+    paddingTop: 48,
+    paddingBottom: 32,
     justifyContent: 'center',
-    paddingTop: 60,
+  },
+  scrollContentCompact: {
+    justifyContent: 'flex-start',
+    paddingTop: 32,
+    paddingBottom: 24,
+  },
+  scrollContentVeryCompact: {
+    paddingTop: 24,
+    paddingBottom: 16,
   },
 
   // Header Section
   header: {
     alignItems: 'center',
     marginBottom: 56,
+  },
+  headerCompact: {
+    marginBottom: 32,
+  },
+  headerVeryCompact: {
+    marginBottom: 24,
   },
   iconContainer: {
     width: 80,
@@ -244,6 +311,12 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 4,
   },
+  iconSmall: {
+    width: 64,
+    height: 64,
+    borderRadius: 16,
+    marginBottom: 16,
+  },
   welcomeText: {
     fontSize: 18,
     fontWeight: '500',
@@ -251,12 +324,20 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     textAlign: 'center',
   },
+  welcomeCompact: {
+    fontSize: 16,
+    marginBottom: 2,
+  },
   title: {
     fontSize: 32,
     fontWeight: '800',
     color: '#1F2937',
     marginBottom: 12,
     textAlign: 'center',
+  },
+  titleCompact: {
+    fontSize: 28,
+    marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
@@ -266,15 +347,24 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     paddingHorizontal: 16,
   },
+  subtitleCompact: {
+    marginBottom: 12,
+    fontSize: 15,
+  },
   featuresContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     width: '100%',
     paddingHorizontal: 20,
   },
+  featuresContainerCompact: {
+    flexWrap: 'wrap',
+    gap: 12,
+  },
   featureItem: {
     alignItems: 'center',
     flex: 1,
+    minWidth: 90,
   },
   featureText: {
     fontSize: 12,
@@ -283,10 +373,16 @@ const styles = StyleSheet.create({
     marginTop: 4,
     textAlign: 'center',
   },
-
+  
   // Form Section
   form: {
     marginBottom: 32,
+  },
+  formCompact: {
+    marginBottom: 20,
+  },
+  formVeryCompact: {
+    marginBottom: 16,
   },
   inputContainer: {
     marginBottom: 24,
@@ -386,6 +482,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 16,
+  },
+  footerCompact: {
+    marginTop: 12,
+    paddingBottom: 4,
+  },
+  footerVeryCompact: {
+    marginTop: 10,
+    paddingBottom: 0,
   },
   footerText: {
     fontSize: 14,

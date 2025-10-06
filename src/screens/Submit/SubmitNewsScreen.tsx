@@ -44,21 +44,21 @@ const CATEGORIES = [
 ];
 
 const URGENCY_LEVELS = [
-  { key: 'normal', label: '📰 Regular News', color: '#64748B' },
-  { key: 'developing', label: '⏳ Developing Story', color: '#F59E0B' },
-  { key: 'breaking', label: '🚨 Breaking News', color: '#EF4444' },
+  { key: 'normal', label: 'Regular News', color: '#64748B', icon: 'newspaper-outline' },
+  { key: 'developing', label: 'Developing Story', color: '#F59E0B', icon: 'time-outline' },
+  { key: 'breaking', label: 'Breaking News', color: '#EF4444', icon: 'alert-circle-outline' },
 ];
 
 const BIAS_OPTIONS = [
-  { key: 'left', label: '🔴 Left Leaning', color: '#EF4444' },
-  { key: 'center', label: '⚪ Center/Neutral', color: '#6B7280' },
-  { key: 'right', label: '🔵 Right Leaning', color: '#3B82F6' },
+  { key: 'left', label: 'Left Leaning', color: '#EF4444', icon: 'chevron-back-circle-outline' },
+  { key: 'center', label: 'Center/Neutral', color: '#6B7280', icon: 'ellipse-outline' },
+  { key: 'right', label: 'Right Leaning', color: '#3B82F6', icon: 'chevron-forward-circle-outline' },
 ];
 
 const SOURCE_REPUTATION = [
-  { key: 'verified', label: '✅ Verified Source', description: 'Well-known, credible news outlet' },
-  { key: 'questionable', label: '⚠️ Questionable Source', description: 'Known for bias or misinformation' },
-  { key: 'unknown', label: '❓ Unknown Source', description: 'Not in our database' },
+  { key: 'verified', label: 'Verified Source', description: 'Well-known, credible news outlet', icon: 'checkmark-circle' },
+  { key: 'questionable', label: 'Questionable Source', description: 'Known for bias or misinformation', icon: 'warning' },
+  { key: 'unknown', label: 'Unknown Source', description: 'Not in our database', icon: 'help-circle' },
 ];
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -418,9 +418,11 @@ const SubmitNewsScreen: React.FC<Props> = ({ navigation }) => {
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
           {/* Primary URL Field */}
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>
-              🔗 Primary News URL (Optional)
-            </Text>
+            <View style={styles.labelContainer}>
+              <Ionicons name="link-outline" size={18} color="#1DA1F2" />
+              <Text style={styles.label}>Primary News URL</Text>
+              <Text style={styles.optionalBadge}>Optional</Text>
+            </View>
             <TextInput
               style={styles.input}
               placeholder="https://example.com/article (optional)"
@@ -459,17 +461,30 @@ const SubmitNewsScreen: React.FC<Props> = ({ navigation }) => {
                 }
               ]}>
                 <Text style={styles.urlDomain}>{urlAnalysis.domain}</Text>
-                <Text style={[
-                  styles.reputationText,
-                  { color:
-                    urlAnalysis.reputation === 'verified' ? '#059669' :
-                    urlAnalysis.reputation === 'questionable' ? '#D97706' : '#6B7280'
-                  }
-                ]}>
-                  {urlAnalysis.reputation === 'verified' && '✅ Verified Source'}
-                  {urlAnalysis.reputation === 'questionable' && '⚠️ Questionable Source'}
-                  {urlAnalysis.reputation === 'unknown' && '❓ Unknown Source'}
-                </Text>
+                <View style={styles.reputationBadge}>
+                  <Ionicons
+                    name={
+                      urlAnalysis.reputation === 'verified' ? 'checkmark-circle' :
+                      urlAnalysis.reputation === 'questionable' ? 'warning' : 'help-circle'
+                    }
+                    size={14}
+                    color={
+                      urlAnalysis.reputation === 'verified' ? '#059669' :
+                      urlAnalysis.reputation === 'questionable' ? '#D97706' : '#6B7280'
+                    }
+                  />
+                  <Text style={[
+                    styles.reputationText,
+                    { color:
+                      urlAnalysis.reputation === 'verified' ? '#059669' :
+                      urlAnalysis.reputation === 'questionable' ? '#D97706' : '#6B7280'
+                    }
+                  ]}>
+                    {urlAnalysis.reputation === 'verified' && 'Verified Source'}
+                    {urlAnalysis.reputation === 'questionable' && 'Questionable Source'}
+                    {urlAnalysis.reputation === 'unknown' && 'Unknown Source'}
+                  </Text>
+                </View>
               </View>
             )}
             
@@ -480,9 +495,11 @@ const SubmitNewsScreen: React.FC<Props> = ({ navigation }) => {
 
           {/* Title Field */}
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>
-              Title <Text style={styles.required}>*</Text>
-            </Text>
+            <View style={styles.labelContainer}>
+              <Ionicons name="text-outline" size={18} color="#1DA1F2" />
+              <Text style={styles.label}>Title</Text>
+              <Text style={styles.required}>*</Text>
+            </View>
             <TextInput
               style={styles.input}
               placeholder="Enter news headline..."
@@ -496,15 +513,16 @@ const SubmitNewsScreen: React.FC<Props> = ({ navigation }) => {
               getCharCountWithoutSpaces(formData.title) > 195 && styles.charCountDanger
             ]}>
               {getCharCountWithoutSpaces(formData.title)}/200 characters
-              {getCharCountWithoutSpaces(formData.title) > 180 && ' ⚠️'}
             </Text>
           </View>
 
           {/* Category Selection */}
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>
-              Category <Text style={styles.required}>*</Text>
-            </Text>
+            <View style={styles.labelContainer}>
+              <Ionicons name="grid-outline" size={18} color="#1DA1F2" />
+              <Text style={styles.label}>Category</Text>
+              <Text style={styles.required}>*</Text>
+            </View>
             <ScrollView 
               horizontal 
               showsHorizontalScrollIndicator={false}
@@ -534,9 +552,11 @@ const SubmitNewsScreen: React.FC<Props> = ({ navigation }) => {
 
           {/* Summary Field */}
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>
-              📝 Summary <Text style={styles.required}>*</Text>
-            </Text>
+            <View style={styles.labelContainer}>
+              <Ionicons name="document-text-outline" size={18} color="#1DA1F2" />
+              <Text style={styles.label}>Summary</Text>
+              <Text style={styles.required}>*</Text>
+            </View>
             <TextInput
               style={[styles.input, styles.textArea]}
               placeholder="Write a clear, objective summary of the news article... (50-2500 characters, spaces not counted)"
@@ -556,7 +576,6 @@ const SubmitNewsScreen: React.FC<Props> = ({ navigation }) => {
               ]}>
                 {getCharCountWithoutSpaces(formData.summary)}/2500 characters
                 {getCharCountWithoutSpaces(formData.summary) < 50 && ' (minimum 50)'}
-                {getCharCountWithoutSpaces(formData.summary) > 2400 && ' ⚠️'}
               </Text>
               {getCharCountWithoutSpaces(formData.summary) >= 50 && (
                 <Text style={styles.charCountSuccess}>✓</Text>
@@ -566,9 +585,11 @@ const SubmitNewsScreen: React.FC<Props> = ({ navigation }) => {
           
           {/* Media Upload Section */}
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>
-              📷 Photos & Videos (Optional)
-            </Text>
+            <View style={styles.labelContainer}>
+              <Ionicons name="images-outline" size={18} color="#1DA1F2" />
+              <Text style={styles.label}>Photos & Videos</Text>
+              <Text style={styles.optionalBadge}>Optional</Text>
+            </View>
             <Text style={styles.hint}>
               Enhance your story with visuals • Up to 8 photos and 1 video (max 3 min)
             </Text>
@@ -714,9 +735,10 @@ const SubmitNewsScreen: React.FC<Props> = ({ navigation }) => {
           
           {/* Urgency Level */}
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>
-              ⏱️ News Urgency
-            </Text>
+            <View style={styles.labelContainer}>
+              <Ionicons name="speedometer-outline" size={18} color="#1DA1F2" />
+              <Text style={styles.label}>News Urgency</Text>
+            </View>
             <View style={styles.urgencyContainer}>
               {URGENCY_LEVELS.map((urgency) => (
                 <TouchableOpacity
@@ -730,6 +752,11 @@ const SubmitNewsScreen: React.FC<Props> = ({ navigation }) => {
                   ]}
                   onPress={() => updateFormData('urgencyLevel', urgency.key)}
                 >
+                  <Ionicons
+                    name={urgency.icon as any}
+                    size={18}
+                    color={formData.urgencyLevel === urgency.key ? '#fff' : urgency.color}
+                  />
                   <Text
                     style={[
                       styles.urgencyText,
@@ -746,9 +773,11 @@ const SubmitNewsScreen: React.FC<Props> = ({ navigation }) => {
 
           {/* Bias Assessment (Optional) */}
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>
-              ⚖️ Your Bias Assessment (Optional)
-            </Text>
+            <View style={styles.labelContainer}>
+              <Ionicons name="analytics-outline" size={18} color="#1DA1F2" />
+              <Text style={styles.label}>Bias Assessment</Text>
+              <Text style={styles.optionalBadge}>Optional</Text>
+            </View>
             <Text style={styles.hint}>
               How do you perceive the bias of this news source?
             </Text>
@@ -763,10 +792,15 @@ const SubmitNewsScreen: React.FC<Props> = ({ navigation }) => {
                       borderColor: bias.color,
                     },
                   ]}
-                  onPress={() => updateFormData('suggestedBias', 
+                  onPress={() => updateFormData('suggestedBias',
                     formData.suggestedBias === bias.key ? undefined : bias.key
                   )}
                 >
+                  <Ionicons
+                    name={bias.icon as any}
+                    size={18}
+                    color={formData.suggestedBias === bias.key ? '#fff' : bias.color}
+                  />
                   <Text
                     style={[
                       styles.biasText,
@@ -783,9 +817,11 @@ const SubmitNewsScreen: React.FC<Props> = ({ navigation }) => {
           {/* Credibility Rating (Optional) */}
           {formData.suggestedBias && (
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>
-                ⭐ Credibility Rating (Optional)
-              </Text>
+              <View style={styles.labelContainer}>
+                <Ionicons name="shield-checkmark-outline" size={18} color="#1DA1F2" />
+                <Text style={styles.label}>Credibility Rating</Text>
+                <Text style={styles.optionalBadge}>Optional</Text>
+              </View>
               <View style={styles.credibilityContainer}>
                 {[1, 2, 3, 4, 5].map((rating) => (
                   <TouchableOpacity
@@ -812,7 +848,10 @@ const SubmitNewsScreen: React.FC<Props> = ({ navigation }) => {
           
           {/* Enhanced Guidelines */}
           <View style={styles.guidelinesContainer}>
-            <Text style={styles.guidelinesTitle}>📝 Submission Guidelines</Text>
+            <View style={styles.guidelinesTitleContainer}>
+              <Ionicons name="document-outline" size={20} color="#1DA1F2" />
+              <Text style={styles.guidelinesTitle}>Submission Guidelines</Text>
+            </View>
             <View style={styles.guideline}>
               <Ionicons name="checkmark-circle-outline" size={16} color="#10B981" />
               <Text style={styles.guidelineText}>
@@ -874,19 +913,24 @@ const SubmitNewsScreen: React.FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: '#F3F4F6',
   },
   keyboardView: {
     flex: 1,
   },
-  
+
   // Header styles
   header: {
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E1E8ED',
+    borderBottomColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 3,
   },
   headerContent: {
     flexDirection: 'row',
@@ -899,22 +943,29 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: '800',
+    color: '#1F2937',
+    letterSpacing: -0.5,
   },
   headerSubtitle: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 2,
+    fontSize: 13,
+    color: '#6B7280',
+    marginTop: 4,
+    fontWeight: '500',
   },
   userInfo: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
   },
   userName: {
     fontSize: 12,
-    color: '#666',
+    color: '#4B5563',
     marginLeft: 6,
+    fontWeight: '600',
   },
   
   // Content styles
@@ -925,24 +976,47 @@ const styles = StyleSheet.create({
   inputContainer: {
     marginTop: 24,
   },
+  labelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
+    color: '#1F2937',
+    flex: 1,
   },
   required: {
     color: '#EF4444',
+    fontSize: 14,
+    fontWeight: '700',
+    marginLeft: 4,
+  },
+  optionalBadge: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#6B7280',
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
   },
   input: {
     backgroundColor: '#fff',
     borderWidth: 1,
-    borderColor: '#E1E8ED',
+    borderColor: '#E5E7EB',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    fontSize: 16,
-    color: '#333',
+    fontSize: 15,
+    color: '#1F2937',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   textArea: {
     minHeight: 120,
@@ -950,22 +1024,24 @@ const styles = StyleSheet.create({
   },
   hint: {
     fontSize: 12,
-    color: '#666',
-    marginTop: 6,
+    color: '#6B7280',
+    marginTop: 8,
+    lineHeight: 16,
   },
   charCount: {
     fontSize: 12,
-    color: '#666',
+    color: '#6B7280',
     textAlign: 'right',
     marginTop: 6,
+    fontWeight: '500',
   },
   charCountWarning: {
     color: '#F59E0B',
-    fontWeight: '600',
+    fontWeight: '700',
   },
   charCountDanger: {
     color: '#EF4444',
-    fontWeight: '600',
+    fontWeight: '700',
   },
   charCountContainer: {
     flexDirection: 'row',
@@ -984,41 +1060,58 @@ const styles = StyleSheet.create({
     marginVertical: 8,
   },
   categoryButton: {
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 18,
+    paddingVertical: 10,
     borderRadius: 20,
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: 'transparent',
+    marginRight: 10,
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   categoryButtonSelected: {
     backgroundColor: '#1DA1F2',
     borderColor: '#1DA1F2',
+    shadowColor: '#1DA1F2',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
   categoryButtonText: {
-    fontSize: 14,
-    color: '#64748B',
-    fontWeight: '500',
+    fontSize: 13,
+    color: '#6B7280',
+    fontWeight: '600',
   },
   categoryButtonTextSelected: {
-    color: '#fff',
-    fontWeight: '600',
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
   
   // URL Analysis styles
   urlAnalysis: {
-    marginTop: 8,
-    padding: 12,
-    borderRadius: 8,
+    marginTop: 10,
+    padding: 14,
+    borderRadius: 10,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   urlDomain: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#1F2937',
+  },
+  reputationBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   reputationText: {
     fontSize: 12,
@@ -1044,21 +1137,30 @@ const styles = StyleSheet.create({
   // Urgency styles
   urgencyContainer: {
     flexDirection: 'column',
-    gap: 8,
+    gap: 10,
+    marginTop: 8,
   },
   urgencyButton: {
-    backgroundColor: '#F8F9FA',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E1E8ED',
+    paddingVertical: 14,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   urgencyText: {
     fontSize: 14,
-    color: '#64748B',
-    fontWeight: '500',
-    textAlign: 'center',
+    color: '#374151',
+    fontWeight: '600',
   },
   
   
@@ -1066,22 +1168,30 @@ const styles = StyleSheet.create({
   // Bias assessment styles
   biasContainer: {
     flexDirection: 'column',
-    gap: 8,
+    gap: 10,
     marginTop: 8,
   },
   biasButton: {
-    backgroundColor: '#F8F9FA',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E1E8ED',
+    paddingVertical: 14,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   biasText: {
     fontSize: 14,
-    color: '#64748B',
-    fontWeight: '500',
-    textAlign: 'center',
+    color: '#374151',
+    fontWeight: '600',
   },
   
   // Credibility rating styles
@@ -1104,29 +1214,39 @@ const styles = StyleSheet.create({
   
   // Guidelines styles
   guidelinesContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: '#F9FAFB',
     borderRadius: 12,
-    padding: 16,
+    padding: 20,
     marginTop: 24,
     marginBottom: 120, // Space for submit button
     borderWidth: 1,
-    borderColor: '#E1E8ED',
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  guidelinesTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 16,
   },
   guidelinesTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 12,
+    fontWeight: '700',
+    color: '#1F2937',
   },
   guideline: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 8,
+    marginBottom: 12,
+    gap: 10,
   },
   guidelineText: {
     fontSize: 14,
-    color: '#666',
-    marginLeft: 8,
+    color: '#4B5563',
     flex: 1,
     lineHeight: 20,
   },
@@ -1137,12 +1257,17 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderTopWidth: 1,
-    borderTopColor: '#E1E8ED',
+    borderTopColor: '#E5E7EB',
     paddingBottom: Platform.OS === 'ios' ? 34 : 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 5,
   },
   submitButton: {
     backgroundColor: '#1DA1F2',
@@ -1151,45 +1276,58 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 16,
     borderRadius: 12,
-    gap: 8,
+    gap: 10,
+    shadowColor: '#1DA1F2',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 4,
   },
   submitButtonDisabled: {
-    backgroundColor: '#CBD5E0',
+    backgroundColor: '#D1D5DB',
+    shadowOpacity: 0,
   },
   submitButtonText: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   
   // Media upload styles
   mediaButtonsContainer: {
     flexDirection: 'row',
     gap: 12,
-    marginTop: 8,
+    marginTop: 12,
   },
   mediaButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F0F9FF',
-    borderWidth: 1,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
     borderColor: '#1DA1F2',
     borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 14,
     gap: 8,
+    shadowColor: '#1DA1F2',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
   },
   mediaButtonDisabled: {
-    backgroundColor: '#F5F5F5',
-    borderColor: '#DDD',
-    opacity: 0.6,
+    backgroundColor: '#F9FAFB',
+    borderColor: '#D1D5DB',
+    opacity: 0.5,
+    shadowOpacity: 0,
   },
   mediaButtonText: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#1DA1F2',
-    fontWeight: '600',
+    fontWeight: '700',
   },
   
   // Media preview styles
